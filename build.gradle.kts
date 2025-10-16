@@ -30,23 +30,23 @@ repositories {
 // Configure Gradle IntelliJ Plugin
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
 intellij {
-    version.set("2021.3.1")
+    version.set("2022.3")
     type.set("IC") // Target IDE Platform
-    plugins.set(listOf("Kotlin", "android"))
+    plugins.set(listOf("Kotlin", "org.jetbrains.android", "java"))
 }
 
 tasks {
     // Set the JVM compatibility versions
     withType<JavaCompile> {
-        sourceCompatibility = "11"
-        targetCompatibility = "11"
+        sourceCompatibility = "17"
+        targetCompatibility = "17"
     }
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-        kotlinOptions.jvmTarget = "11"
+        kotlinOptions.jvmTarget = "17"
     }
 
     patchPluginXml {
-        sinceBuild.set("212")
+        sinceBuild.set("223")
         untilBuild.set("251.*")
     }
 

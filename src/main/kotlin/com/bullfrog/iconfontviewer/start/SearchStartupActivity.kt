@@ -1,6 +1,9 @@
+
 package com.bullfrog.iconfontviewer.start
 
-import com.bullfrog.iconfontviewer.FontModelListHolder
+import com.bullfrog.iconfontviewer.IconFontSettings
+import com.bullfrog.iconfontviewer.model.FontInfo
+import com.bullfrog.iconfontviewer.model.FontSource
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
@@ -10,61 +13,60 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.StartupActivity
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
-import java.io.File
-
 
 class SearchStartupActivity : StartupActivity.DumbAware {
 
     override fun runActivity(project: Project) {
         DumbService.getInstance(project).runWhenSmart {
-            searchMatchedFiles(project)
-        }
-    }
-
-    private fun searchMatchedFiles(project: Project) {
-        val task = object : Task.Backgroundable(project, "searching files by regex", false) {
-            override fun run(indicator: ProgressIndicator) {
-                ReadAction.run<Throwable> {
-                    // build FontModelListHolder，only search iconfont file in current project, do not search in dependent module
-                    buildFontModelListHolder(project)
+            val task = object : Task.Backgroundable(project, "Scanning IconFont TTF Files", false) {
+                override fun run(indicator: ProgressIndicator) {
+                    ReadAction.run<Throwable> {
+                        scanForFonts(project, indicator)
+                    }
                 }
             }
-
+            ProgressManager.getInstance().run(task)
         }
-        ProgressManager.getInstance().run(task)
     }
 
-    private fun buildFontModelListHolder(project: Project) {
-        val scope = GlobalSearchScope.allScope(project)
-        val startTime = System.currentTimeMillis()
-        val allFilenames = FilenameIndex.getAllFilenames(project)
-        println("filenames count = ${allFilenames.size}")
-        for (filename in allFilenames) {
-            if (filename.endsWith(".ttf")) {
-                val files = FilenameIndex.getVirtualFilesByName(filename, scope)
-                println("files size = ${files.size}, current thread is ${Thread.currentThread()}")
-                for (file in files) {
-                    if (!file.path.contains("/build/")) {
-                        println("ttf = ${file.path}")
-                        FontModelListHolder.putFont(file.path, filename)
+    companion object {
+        fun scanForFonts(project: Project, indicator: ProgressIndicator) {
+            indicator.text = "Searching for .ttf files..."
+            val settings = IconFontSettings.getInstance(project)
+            val existingPaths = settings.state.fontInfos.map { it.path }.toSet()
+
+            val scope = GlobalSearchScope.allScope(project)
+            val allTtfFiles = FilenameIndex.getAllFilenames(project)
+                .filter { it.endsWith(".ttf", ignoreCase = true) }
+
+            indicator.isIndeterminate = false
+            var processed = 0.0
+
+            allTtfFiles.forEach { filename ->
+                indicator.checkCanceled()
+                indicator.fraction = ++processed / allTtfFiles.size
+                indicator.text2 = "Processing: $filename"
+
+                val virtualFiles = FilenameIndex.getVirtualFilesByName(filename, scope)
+                for (file in virtualFiles) {
+                    if (file.path !in existingPaths) {
+                        val source = if (file.path.contains("/.gradle/caches/") || file.path.contains("/build/")) {
+                            FontSource.AAR
+                        } else {
+                            FontSource.PROJECT
+                        }
+
+                        val isIconFontHeuristic = filename.contains("icon", ignoreCase = true)
+
+                        val fontInfo = FontInfo(
+                            path = file.path,
+                            source = source,
+                            enabled = isIconFontHeuristic
+                        )
+                        settings.state.fontInfos.add(fontInfo)
                     }
                 }
             }
         }
-        println("search time cost = ${System.currentTimeMillis() - startTime}")
-        println("font path = ${FontModelListHolder.getFontModelList()}")
-    }
-
-    // 暂时不用，排除掉build目录下的文件就好了，重复基本只会存在于项目目录和build目录中
-    // 计算MD5值需要读取整个文件流，还是蛮耗时的
-    private fun deDuplicate(fileList: List<String>) {
-        fileList
-            .mapNotNull { fileName ->
-                val file = File(fileName)
-                if (file.exists()) file else null
-            }
-            .forEach {
-                // no need for now
-            }
     }
 }

@@ -1,7 +1,7 @@
 package com.bullfrog.iconfontviewer.ui
 
 import com.android.tools.adtui.LightCalloutPopup
-import com.bullfrog.iconfontviewer.FontPopupModelListHolder
+import com.bullfrog.iconfontviewer.IconFontSettings
 import com.bullfrog.iconfontviewer.model.IconFontPopupModel
 import com.bullfrog.iconfontviewer.util.*
 import com.intellij.codeInsight.daemon.GutterIconNavigationHandler
@@ -11,6 +11,7 @@ import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementFactory
+import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.xml.XmlAttribute
@@ -38,19 +39,26 @@ class IconFontLineMarkerNavHandler : GutterIconNavigationHandler<PsiElement> {
     private val speedSearch = SpeedSearch().apply {
         setEnabled(true)
         addChangeListener {
-            iconFontListModel.refilter()
+            iconFontListModel?.refilter()
         }
     }
 
-    private var iconFontListModel: NameFilteringListModel<IconFontPopupModel> = NameFilteringListModel<IconFontPopupModel>(
-        CollectionListModel(FontPopupModelListHolder.get()),
-        { it.key },
-        speedSearch::shouldBeShowing,
-        { StringUtil.notNullize(speedSearch.filter) }
-    )
+    private var iconFontListModel: NameFilteringListModel<IconFontPopupModel>? = null
 
     fun setPsiElement(psiElement: PsiElement?) {
+        if (psiElement == null) {
+            return
+        }
+        if (PsiManager.getInstance(psiElement.project).areElementsEquivalent(psiElement, this.psiElement)) {
+            return
+        }
         this.psiElement = psiElement
+        iconFontListModel = NameFilteringListModel<IconFontPopupModel>(
+            CollectionListModel(IconFontSettings.getInstance(psiElement.project).iconPopupList),
+            { it.key },
+            speedSearch::shouldBeShowing,
+            { StringUtil.notNullize(speedSearch.filter) }
+        )
     }
 
     override fun navigate(e: MouseEvent?, elt: PsiElement?) {

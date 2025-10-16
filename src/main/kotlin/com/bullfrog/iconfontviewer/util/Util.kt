@@ -1,45 +1,86 @@
-@file:Suppress("RedundantIf")
 
 package com.bullfrog.iconfontviewer.util
 
+import com.android.ide.common.rendering.api.ResourceNamespace
+import com.android.ide.common.rendering.api.ResourceValue
 import com.android.resources.ResourceType
-import com.android.tools.idea.ui.resourcemanager.model.*
-import com.bullfrog.iconfontviewer.FontModelListHolder
-import com.bullfrog.iconfontviewer.FontPopupModelListHolder
-import com.bullfrog.iconfontviewer.model.IconFontPopupModel
+import com.bullfrog.iconfontviewer.IconFontSettings
 import com.bullfrog.iconfontviewer.ui.IconFromIconFontCharacter
-import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.project.Project
-import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiFile
 import org.jetbrains.android.facet.AndroidFacet
+import com.android.tools.idea.res.ResourceRepositoryManager
+import com.android.tools.idea.ui.resourcemanager.model.getDependentModuleResources
+import com.android.tools.idea.ui.resourcemanager.model.getLibraryResources
+import com.android.tools.idea.ui.resourcemanager.model.getModuleResources
+import com.bullfrog.iconfontviewer.model.IconFontPopupModel
+import java.awt.Font
 import java.io.File
 import java.util.*
 import javax.swing.Icon
-
 
 fun getString(key: String): String {
     val bundle = ResourceBundle.getBundle("strings")
     return bundle.getString(key)
 }
 
-fun getIconFromIconFont(psiElement: PsiElement): Icon? {
-    println("get icon from iconfont on ${Thread.currentThread()}, text = ${psiElement.text}, $psiElement")
-    if (FontPopupModelListHolder.get().isEmpty()) {
-        buildFontPopupModelListHolder(psiElement)
+fun getIconForElement(element: PsiElement): Icon? {
+    val instance = IconFontSettings.getInstance(element.project)
+    val enabledFonts = instance.state.fontInfos
+        .filter { it.enabled }
+        .mapNotNull { fontInfo ->
+            instance.fontCache.computeIfAbsent(fontInfo.path) { path ->
+                try {
+                    Font.createFont(Font.TRUETYPE_FONT, File(path)).deriveFont(IconFromIconFontCharacter.FONT_SIZE)
+                } catch (e: Exception) {
+                    // Log error or notify user
+                    e.printStackTrace()
+                    null
+                }
+            }
+        }
+
+    if (enabledFonts.isEmpty()) {
+        return null
     }
-    val key = psiElement.removePrefix()
-    return FontPopupModelListHolder.get().firstOrNull { it.key == key }?.icon // TODO 优化成map，不要list遍历查询
+
+//    return getResources(element, enabledFonts, instance)
+
+    val resourceValue = getResourceValueForElement(element) ?: return null
+    val charText = resourceValue.value
+    val key = resourceValue.name
+
+    for (font in enabledFonts) {
+        if (font.canDisplayUpTo(charText) == -1) {
+            val icon = IconFromIconFontCharacter(charText, font)
+            instance.iconPopupList.add(IconFontPopupModel(icon, key, charText))
+            return icon
+        }
+    }
+
+    return null
 }
 
-// lazy build, cuz this is just the proper time that you can get non-empty assetList
-fun buildFontPopupModelListHolder(psiElement: PsiElement) {
-    println("build popup list ${Thread.currentThread()}")
-    val startTime = System.currentTimeMillis()
+private fun getResourceValueForElement(element: PsiElement): ResourceValue? {
+    val androidFacet = AndroidFacet.getInstance(element) ?: return null
 
+    val resourceName = element.removePrefix()
+    if (resourceName.isBlank()) return null
+
+    // 使用 ModuleResourceManagers 来准确查找字符串资源的值
+    val manager = ResourceRepositoryManager.getInstance(androidFacet)
+    val stringResource = manager.appResources.getResources(ResourceNamespace.TODO(), ResourceType.STRING, resourceName)
+
+
+    return if (stringResource.isNotEmpty()) {
+        stringResource[0].resourceValue
+    } else {
+        null
+    }
+}
+
+private fun getResources(psiElement: PsiElement, enabledFonts: List<Font>, instance: IconFontSettings): Icon? {
     val resourceType = ResourceType.STRING
-    val androidFacet = AndroidFacet.getInstance(psiElement) ?: return
+    val androidFacet = AndroidFacet.getInstance(psiElement) ?: return null
     val stringModuleAssets = getModuleResources(androidFacet, resourceType, emptyList()).assetSets
     val stringDependentAssets = getDependentModuleResources(androidFacet, resourceType, emptyList()).flatMap { it.assetSets }
     val stringLibraryAssets = getLibraryResources(androidFacet, resourceType, emptyList()).flatMap { it.assetSets }
@@ -47,78 +88,15 @@ fun buildFontPopupModelListHolder(psiElement: PsiElement) {
 
     assetList.forEach {
         val asset = it.assets.first()
-        val text = asset.resourceItem.resourceValue.value
+        val charText = asset.resourceItem.resourceValue.value
         val key = asset.name
-        var icon: Icon? = null
-        if (FontModelListHolder.getFontPaths().isNotEmpty()) {
-            FontModelListHolder.getFonts().forEach { font ->
-                if (font.canDisplayUpTo(text) == -1) {
-                    icon = IconFromIconFontCharacter(text, font)
-                    return@forEach
-                }
+        for (font in enabledFonts) {
+            if (font.canDisplayUpTo(charText) == -1) {
+                val icon = IconFromIconFontCharacter(charText, font)
+                instance.iconPopupList.add(IconFontPopupModel(icon, key, charText))
+                return icon
             }
-        }
-        icon?.let {
-            FontPopupModelListHolder.add(IconFontPopupModel(it, key, text))
-            println("icon = $icon, key = $key")
-        }
-    }
-    println("buildFontPopupModelListHolder time cost = ${System.currentTimeMillis() - startTime}")
-}
-
-fun isTTF(path: String): Boolean {
-    val file = File(path)
-    if (!file.exists()) return false
-    if (!file.isFile) return false
-    if (!file.name.endsWith(".ttf")) return false
-    return true
-}
-
-fun getCurrentPsiFile(project: Project): PsiFile? {
-    val document = FileEditorManager.getInstance(project).selectedTextEditor?.document ?: return null
-    return PsiDocumentManager.getInstance(project).getPsiFile(document)
-}
-
-fun getIconFontString(psiElement: PsiElement): Asset? {
-    val resourceType = ResourceType.STRING
-    val androidFacet = AndroidFacet.getInstance(psiElement) ?: return null
-    val stringModuleAssets = getModuleResources(androidFacet, resourceType, emptyList()).assetSets
-    val stringDependentAssets = getDependentModuleResources(androidFacet, resourceType, emptyList()).flatMap { it.assetSets }
-    val stringLibraryAssets = getLibraryResources(androidFacet, resourceType, emptyList()).flatMap { it.assetSets }
-
-    val key = psiElement.removePrefix()
-    stringModuleAssets.forEach { asset ->
-        if (asset.name == key && asset.assets.isNotEmpty()) {
-            return asset.assets.first()
-        }
-    }
-    stringDependentAssets.forEach { asset ->
-        if (asset.name == key && asset.assets.isNotEmpty()) {
-            return asset.assets.first()
-        }
-    }
-    stringLibraryAssets.forEach { asset ->
-        if (asset.name == key && asset.assets.isNotEmpty()) {
-            return asset.assets.first()
         }
     }
     return null
-}
-
-fun getIconFontCharacter(list: List<PsiElement>): List<Pair<Asset, PsiElement>>? {
-    if (list.isEmpty()) return null
-    val firstElement = list.first()
-    val androidFacet = AndroidFacet.getInstance(firstElement) ?: return null
-    val stringAssets = getModuleResources(androidFacet, ResourceType.STRING, emptyList()).assetSets
-    val result = mutableListOf<Pair<Asset, PsiElement>>()
-    list.forEach { psiElement ->
-        val key = psiElement.removePrefix()
-        stringAssets.forEach { asset ->
-            if (asset.name == key && asset.assets.isNotEmpty()) {
-                val first = asset.assets.first()
-                result.add(Pair(first, psiElement))
-            }
-        }
-    }
-    return result
 }

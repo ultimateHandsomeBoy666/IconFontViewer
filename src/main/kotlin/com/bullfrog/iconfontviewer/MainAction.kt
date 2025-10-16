@@ -8,7 +8,8 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 
 class MainAction : AnAction() {
     override fun actionPerformed(event: AnActionEvent) {
-        TTFInputDialog(event.project, getString("icv.dialog.title")).show()
+        val project = event.project ?: return
+        TTFInputDialog(project, getString("icv.dialog.title")).show()
     }
 
 }
