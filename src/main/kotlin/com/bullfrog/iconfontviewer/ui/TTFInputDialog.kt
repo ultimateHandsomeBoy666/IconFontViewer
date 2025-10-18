@@ -7,7 +7,7 @@ import javax.swing.JComponent
 import javax.swing.JLabel
 
 class TTFInputDialog(
-    project: Project?,
+    private val project: Project?,
     dialogTitle: String
 ) : DialogWrapper(
     project, null, false, IdeModalityType.MODELESS, false
@@ -19,6 +19,6 @@ class TTFInputDialog(
     }
 
     override fun createCenterPanel(): JComponent {
-        return TTFMainPanel()
+        return project?.let { TTFMainPanel(it) } ?: JLabel("No project available")
     }
 }

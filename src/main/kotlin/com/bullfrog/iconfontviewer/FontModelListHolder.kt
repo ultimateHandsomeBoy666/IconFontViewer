@@ -1,16 +1,31 @@
 package com.bullfrog.iconfontviewer
 
 import com.bullfrog.iconfontviewer.model.IconFontTtfFileModel
+import com.bullfrog.iconfontviewer.model.TTFSource
+import com.bullfrog.iconfontviewer.model.TTFType
+import com.bullfrog.iconfontviewer.service.TTFClassifier
 import com.bullfrog.iconfontviewer.ui.IconFromIconFontCharacter
 import java.awt.Font
 import java.io.File
 import java.util.*
 
+/**
+ * 旧版本的字体模型持有者
+ * 保留用于向后兼容和数据迁移
+ */
 object FontModelListHolder {
 
-    private val fontModelList = Collections.synchronizedList(mutableListOf<IconFontTtfFileModel>())
+    // 用于向后兼容的旧数据结构
+    data class LegacyIconFontTtfFileModel(
+        var selected: Boolean,
+        var ttfFileName: String,
+        var ttfAbsolutePath: String,
+        var font: Font
+    )
 
-    fun getFontModelList(): List<IconFontTtfFileModel> = fontModelList
+    private val fontModelList = Collections.synchronizedList(mutableListOf<LegacyIconFontTtfFileModel>())
+
+    fun getFontModelList(): List<LegacyIconFontTtfFileModel> = fontModelList
 
     fun getFontPaths(): List<String> {
         return fontModelList.map { it.ttfAbsolutePath }
@@ -29,7 +44,7 @@ object FontModelListHolder {
         }
         val font = createFont(fontPath) ?: return false
         fontModelList.add(
-            IconFontTtfFileModel(
+            LegacyIconFontTtfFileModel(
                 selected = true,
                 ttfFileName = fontFileName,
                 ttfAbsolutePath = fontPath,
@@ -37,6 +52,10 @@ object FontModelListHolder {
             )
         )
         return true
+    }
+
+    fun clear() {
+        fontModelList.clear()
     }
 
     private fun createFont(fontPath: String): Font? {

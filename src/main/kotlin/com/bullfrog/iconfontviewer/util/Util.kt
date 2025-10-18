@@ -4,20 +4,45 @@ package com.bullfrog.iconfontviewer.util
 
 import com.android.resources.ResourceType
 import com.android.tools.idea.ui.resourcemanager.model.*
-import com.bullfrog.iconfontviewer.FontModelListHolder
 import com.bullfrog.iconfontviewer.FontPopupModelListHolder
 import com.bullfrog.iconfontviewer.model.IconFontPopupModel
+import com.bullfrog.iconfontviewer.service.TTFStateManager
+import com.bullfrog.iconfontviewer.start.SearchStartupActivity
 import com.bullfrog.iconfontviewer.ui.IconFromIconFontCharacter
+import com.intellij.openapi.application.ApplicationInfo
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import org.jetbrains.android.facet.AndroidFacet
+import org.jetbrains.kotlin.utils.PrintingLogger
 import java.io.File
 import java.util.*
 import javax.swing.Icon
 
+fun buildLogger(cls: Class<*>): Logger {
+    return if (isPluginInDebugMode()) {
+        TagPrintLogger(cls)
+    } else {
+        Logger.getInstance(cls)
+    }
+}
+
+fun isPluginInDebugMode(): Boolean {
+    return ApplicationManager.getApplication().isInternal
+}
+
+fun isAndroidProject(project: Project): Boolean {
+    val modules = ModuleManager.getInstance(project).modules
+    return modules.any { module ->
+        AndroidFacet.getInstance(module) != null
+    }
+}
 
 fun getString(key: String): String {
     val bundle = ResourceBundle.getBundle("strings")
@@ -50,11 +75,18 @@ fun buildFontPopupModelListHolder(psiElement: PsiElement) {
         val text = asset.resourceItem.resourceValue.value
         val key = asset.name
         var icon: Icon? = null
-        if (FontModelListHolder.getFontPaths().isNotEmpty()) {
-            FontModelListHolder.getFonts().forEach { font ->
-                if (font.canDisplayUpTo(text) == -1) {
-                    icon = IconFromIconFontCharacter(text, font)
-                    return@forEach
+        // 从新的 TTF 状态管理器获取启用的字体
+        val project = psiElement.project
+        val stateManager = project.service<TTFStateManager>()
+        val enabledTTFs = stateManager.getEnabledTTFs()
+
+        if (enabledTTFs.isNotEmpty()) {
+            enabledTTFs.forEach ttfLoop@ { ttf ->
+                ttf.font?.let { font ->
+                    if (font.canDisplayUpTo(text) == -1) {
+                        icon = IconFromIconFontCharacter(text, font)
+                        return@ttfLoop
+                    }
                 }
             }
         }

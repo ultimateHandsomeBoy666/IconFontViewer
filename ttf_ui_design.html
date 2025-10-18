@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IconFontViewer - TTF Management UI Design</title>
+    <style>
+        /* 现代 IntelliJ IDEA 2023+ 风格 */
+        body {
+            font-family: "JetBrains Mono", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #2b2d30;
+            color: #bcbec4;
+            padding: 0;
+            margin: 0;
+        }
+
+        .settings-panel {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #2b2d30;
+            min-height: 100vh;
+            padding: 32px 24px;
+        }
+
+        h3 {
+            color: #ffffff;
+            border-bottom: 1px solid #43454a;
+            padding-bottom: 16px;
+            margin-top: 0;
+            margin-bottom: 24px;
+            font-size: 20px;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+        }
+
+        .font-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            background-color: #313438;
+            border-radius: 12px;
+            border: 1px solid #43454a;
+            overflow: hidden;
+        }
+
+        .font-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid #43454a;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .font-item:last-child {
+            border-bottom: none;
+        }
+
+        .font-item:hover {
+            background-color: #383a3f;
+        }
+
+        .font-item:active {
+            background-color: #3a3c41;
+        }
+
+        .font-info {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .font-icon {
+            font-size: 20px;
+            margin-right: 16px;
+            width: 36px;
+            height: 36px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #43454a;
+            border-radius: 8px;
+            color: #bcbec4;
+            transition: all 0.2s ease;
+        }
+
+        .font-icon.has-preview {
+            background: linear-gradient(135deg, #4c7fef 0%, #6366f1 100%);
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(76, 127, 239, 0.24);
+        }
+
+        .font-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .font-details .font-name {
+            font-weight: 500;
+            color: #ffffff;
+            margin: 0;
+            font-size: 14px;
+            transition: color 0.2s;
+            letter-spacing: -0.01em;
+        }
+
+        .font-details .font-path {
+            font-size: 12px;
+            color: #8c9196;
+            margin: 4px 0 0 0;
+            word-break: break-all;
+            font-family: "JetBrains Mono", monospace;
+        }
+
+        .font-details .font-hint {
+            font-size: 11px;
+            color: #f9826c;
+            margin: 2px 0 0 0;
+            font-style: italic;
+        }
+
+        /* enabled状态：正常显示 */
+        .font-item.enabled .font-name {
+            color: #ffffff;
+        }
+
+        .font-item.enabled .font-path {
+            color: #8c9196;
+        }
+
+        .font-item.enabled .font-icon {
+            opacity: 1;
+        }
+
+        /* disabled状态：置灰 */
+        .font-item.disabled {
+            opacity: 0.5;
+        }
+
+        .font-item.disabled:hover {
+            background-color: transparent;
+        }
+
+        .font-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .source-tag {
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            background-color: #43454a;
+            color: #bcbec4;
+            white-space: nowrap;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+        }
+
+        .source-project {
+            background-color: #2a4e32;
+            color: #81c784;
+        }
+
+        .source-aar {
+            background-color: #1a365d;
+            color: #63b3ed;
+        }
+
+        .source-user {
+            background-color: #7c2d12;
+            color: #ffa726;
+        }
+
+        /* 现代 IDEA 2023+ 风格开关 */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 22px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #4c4f52;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 22px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #afb1b3;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #4c7fef;
+        }
+
+        input:checked + .slider:before {
+            background-color: #ffffff;
+            transform: translateX(14px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 删除按钮 */
+        .delete-button {
+            background: none;
+            border: none;
+            color: #8c9196;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 6px;
+            line-height: 1;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .delete-button:hover {
+            color: #ff8380;
+            background-color: rgba(255, 131, 128, 0.1);
+        }
+
+        /* 底部操作栏 */
+        .panel-footer {
+            padding: 20px 20px;
+            border-top: 1px solid #43454a;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            background-color: #2b2d30;
+        }
+
+        .footer-btn {
+            font-family: inherit;
+            font-weight: 500;
+            font-size: 13px;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            letter-spacing: -0.01em;
+        }
+
+        .footer-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .footer-btn.primary {
+            background: linear-gradient(135deg, #4c7fef 0%, #6366f1 100%);
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(76, 127, 239, 0.24);
+        }
+
+        .footer-btn.primary:hover {
+            box-shadow: 0 4px 16px rgba(76, 127, 239, 0.32);
+        }
+
+        .footer-btn:not(.primary) {
+            background: #43454a;
+            color: #bcbec4;
+        }
+
+        .footer-btn:not(.primary):hover {
+            background: #4f5157;
+        }
+
+        /* 状态说明 */
+        .legend {
+            margin: 32px auto 0;
+            max-width: 800px;
+            background-color: #313438;
+            border: 1px solid #43454a;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .legend-title {
+            color: #ffffff;
+            font-weight: 500;
+            margin-bottom: 16px;
+            font-size: 15px;
+            letter-spacing: -0.01em;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: #bcbec4;
+            line-height: 1.5;
+        }
+
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .legend-item span {
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="legend">
+        <div class="legend-title">使用说明</div>
+        <div class="legend-item">
+            <span>•</span>
+            <span>插件会自动扫描项目及依赖中的字体文件，基于文件名（如 "icon"）启发式规则自动启用部分字体进行预览</span>
+        </div>
+        <div class="legend-item">
+            <span>•</span>
+            <span>手动添加的TTF文件将总是保持启用状态，用于图标预览</span>
+        </div>
+        <div class="legend-item">
+            <span>•</span>
+            <span>您可以随时通过开关手动启用或关闭扫描到的字体</span>
+        </div>
+    </div>
+
+    <div class="settings-panel">
+        <h3>IconFont TTF 文件管理</h3>
+        <ul class="font-list">
+            <!-- 确定的图标字体 - 项目扫描，默认启用，有图标预览 -->
+            <li class="font-item enabled">
+                <div class="font-info">
+                    <div class="font-icon has-preview" title="图标预览">⭐</div>
+                    <div class="font-details">
+                        <p class="font-name">iconfont.ttf</p>
+                        <p class="font-path">/app/src/main/assets/fonts/iconfont.ttf</p>
+                    </div>
+                </div>
+                <div class="font-controls">
+                    <span class="source-tag source-project">项目扫描</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </li>
+
+            <!-- 图标字体 - AAR依赖，命中启发式规则自动启用，有图标预览 -->
+            <li class="font-item enabled">
+                <div class="font-info">
+                    <div class="font-icon has-preview" title="图标预览">🏠</div>
+                    <div class="font-details">
+                        <p class="font-name">material_icons.ttf</p>
+                        <p class="font-path">/.../caches/transforms-3/.../com.google.android.material/res/font/</p>
+                    </div>
+                </div>
+                <div class="font-controls">
+                    <span class="source-tag source-aar">AAR依赖</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </li>
+
+            <!-- 用户手动添加的图标字体 - 强制启用，无开关，可删除，有图标预览 -->
+            <li class="font-item enabled">
+                <div class="font-info">
+                    <div class="font-icon has-preview" title="图标预览">❤</div>
+                    <div class="font-details">
+                        <p class="font-name">fontawesome-webfont.ttf</p>
+                        <p class="font-path">/Users/bullfrog/Downloads/fontawesome-webfont.ttf</p>
+                    </div>
+                </div>
+                <div class="font-controls">
+                    <span class="source-tag source-user">手动添加</span>
+                    <button class="delete-button" title="删除此项">×</button>
+                </div>
+            </li>
+
+            <!-- 普通字体 - 项目扫描，默认不启用，无图标预览 -->
+            <li class="font-item disabled">
+                <div class="font-info">
+                    <div class="font-icon" title="无图标预览">T</div>
+                    <div class="font-details">
+                        <p class="font-name">roboto_regular.ttf</p>
+                        <p class="font-path">/app/src/main/assets/fonts/roboto_regular.ttf</p>
+                    </div>
+                </div>
+                <div class="font-controls">
+                    <span class="source-tag source-project">项目扫描</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </li>
+
+            <!-- 普通字体 - AAR依赖，默认不启用，无图标预览 -->
+            <li class="font-item disabled">
+                <div class="font-info">
+                    <div class="font-icon" title="无图标预览">T</div>
+                    <div class="font-details">
+                        <p class="font-name">noto_sans_cjk.ttf</p>
+                        <p class="font-path">/.../caches/transforms-3/.../androidx.core/res/font/noto_sans_cjk.ttf</p>
+                    </div>
+                </div>
+                <div class="font-controls">
+                    <span class="source-tag source-aar">AAR依赖</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </li>
+        </ul>
+
+        <div class="panel-footer">
+            <button class="footer-btn primary" onclick="addTTF()">添加 TTF 文件</button>
+            <button class="footer-btn" onclick="refresh()">重新扫描</button>
+        </div>
+    </div>
+
+    <script>
+        function addTTF() {
+            alert('打开文件选择器添加TTF文件');
+            // 实际实现中会调用系统文件选择器
+        }
+
+        function refresh() {
+            alert('重新扫描项目中的TTF文件');
+            // 实际实现中会重新扫描项目
+        }
+
+
+        // 监听开关状态变化
+        document.querySelectorAll('.toggle-switch input').forEach(toggle => {
+            toggle.addEventListener('change', function() {
+                const fontItem = this.closest('.font-item');
+                const fontName = fontItem.querySelector('.font-name').textContent;
+
+                if (this.checked) {
+                    // 启用：高亮显示
+                    fontItem.classList.remove('disabled');
+                    fontItem.classList.add('enabled');
+                    console.log(`启用字体: ${fontName}`);
+                } else {
+                    // 禁用：置灰显示
+                    fontItem.classList.remove('enabled');
+                    fontItem.classList.add('disabled');
+                    console.log(`禁用字体: ${fontName}`);
+                }
+            });
+        });
+
+        // 为删除按钮添加事件（仅用户手动添加的字体有删除按钮）
+        document.querySelectorAll('.delete-button').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const ttfName = this.closest('.font-item').querySelector('.font-name').textContent;
+                if (confirm(`确定要从插件中移除 ${ttfName} 吗？`)) {
+                    this.closest('.font-item').remove();
+                    console.log(`删除用户添加的字体: ${ttfName}`);
+                }
+            });
+        });
+
+        // 点击TTF图标可以切换开关（仅对有开关的项目生效）
+        document.querySelectorAll('.font-icon').forEach(icon => {
+            const toggle = icon.closest('.font-item').querySelector('.toggle-switch input');
+            if (toggle) {
+                icon.addEventListener('click', function() {
+                    toggle.checked = !toggle.checked;
+                    toggle.dispatchEvent(new Event('change'));
+                });
+                icon.style.cursor = 'pointer';
+                icon.title = icon.title + ' (点击切换开关)';
+            }
+        });
+    </script>
+</body>
+</html>

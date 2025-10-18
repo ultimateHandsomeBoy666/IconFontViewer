@@ -1,6 +1,5 @@
 package com.bullfrog.iconfontviewer.ui
 
-import com.bullfrog.iconfontviewer.FontModelListHolder
 import com.intellij.ui.JBColor
 import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.ui.JBScalableIcon
