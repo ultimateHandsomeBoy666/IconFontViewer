@@ -1,6 +1,5 @@
 package com.bullfrog.iconfontviewer.start
 
-import com.bullfrog.iconfontviewer.model.TTFSource
 import com.bullfrog.iconfontviewer.service.TTFRepository
 import com.bullfrog.iconfontviewer.service.TTFScanService
 import com.bullfrog.iconfontviewer.util.buildLogger
@@ -12,7 +11,6 @@ import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.StartupActivity
-import org.jetbrains.kotlin.idea.gradleTooling.get
 
 /**
  * 插件启动活动

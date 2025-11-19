@@ -5,6 +5,7 @@ import com.bullfrog.iconfontviewer.model.TTFSource
 import com.bullfrog.iconfontviewer.model.TTFType
 import com.bullfrog.iconfontviewer.service.TTFStateChangeListener
 import com.bullfrog.iconfontviewer.service.TTFStateManager
+import com.bullfrog.iconfontviewer.util.getString
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileChooser.FileChooser
@@ -40,12 +41,12 @@ class TTFMainPanel(private val project: Project) : JPanel(), TTFStateChangeListe
 
         // TTF 列表容器
         containerPanel.layout = BoxLayout(containerPanel, BoxLayout.Y_AXIS)
-        containerPanel.background = JBColor(0x2b2d30, 0x2b2d30)
+        containerPanel.background = JBColor.background()
 
         val scrollPane = JBScrollPane(containerPanel).apply {
             border = BorderFactory.createEmptyBorder()
             preferredSize = Dimension(700, 400)
-            background = JBColor(0x2b2d30, 0x2b2d30)
+            background = JBColor.background()
         }
         add(scrollPane, BorderLayout.CENTER)
 
@@ -58,41 +59,37 @@ class TTFMainPanel(private val project: Project) : JPanel(), TTFStateChangeListe
     private fun createLegendPanel(): JPanel {
         return JPanel().apply {
             layout = BorderLayout()
-            background = JBColor(0x313438, 0x313438)
+            background = JBColor.background()
             border = JBUI.Borders.compound(
                 JBUI.Borders.customLine(JBColor(0x43454a, 0x43454a)),
-                JBUI.Borders.empty(20, 20)
+                JBUI.Borders.empty(10, 20, 20, 10)
             )
 
-            add(JLabel("使用说明").apply {
+            add(JLabel(getString("icv.dialog.legend.title")).apply {
                 font = font.deriveFont(Font.BOLD, 15f)
-                foreground = JBColor.WHITE
+                foreground = JBColor.foreground()
             }, BorderLayout.NORTH)
 
-            val legendText = """
-                • 插件会自动扫描项目及依赖中的字体文件，基于文件名（如 "icon"）启发式规则自动启用部分字体进行预览
-                • 手动添加的TTF文件将总是保持启用状态，用于图标预览
-                • 您可以随时通过开关手动启用或关闭扫描到的字体
-            """.trimIndent()
+            val legendText = getString("icv.dialog.legend").trimIndent()
 
             add(JLabel("<html>${legendText.replace("\n", "<br>")}</html>").apply {
                 font = font.deriveFont(13f)
-                foreground = JBColor(0xbcbec4, 0xbcbec4)
-                border = JBUI.Borders.emptyTop(16)
+                foreground = JBColor.darkGray
+                border = JBUI.Borders.emptyTop(12)
             }, BorderLayout.CENTER)
         }
     }
 
     private fun createActionPanel(): JPanel {
         return JPanel(FlowLayout(FlowLayout.RIGHT)).apply {
-            background = JBColor(0x2b2d30, 0x2b2d30)
+            background = JBColor.background()
             border = JBUI.Borders.compound(
                 JBUI.Borders.customLineTop(JBColor(0x43454a, 0x43454a)),
                 JBUI.Borders.empty(20, 15)
             )
 
-            add(createActionButton("重新扫描", false) { refreshScan() })
-            add(createActionButton("添加 TTF 文件", true) { addUserTTF() })
+            add(createActionButton(getString("icv.dialog.action.refreshScan"), false) { refreshScan() })
+            add(createActionButton(getString("icv.dialog.action.addTTF"), true) { addUserTTF() })
         }
     }
 

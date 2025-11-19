@@ -1,8 +1,8 @@
 package com.bullfrog.iconfontviewer.ui
 
+import com.bullfrog.iconfontviewer.util.getString
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
-import com.intellij.ui.components.JBTextField
 import javax.swing.JComponent
 import javax.swing.JLabel
 
@@ -19,6 +19,6 @@ class TTFInputDialog(
     }
 
     override fun createCenterPanel(): JComponent {
-        return project?.let { TTFMainPanel(it) } ?: JLabel("No project available")
+        return project?.let { TTFMainPanel(it) } ?: JLabel(getString("icv.dialog.error.msg.1"))
     }
 }

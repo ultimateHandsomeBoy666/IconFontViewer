@@ -110,7 +110,7 @@ class TTFScanService : Disposable {
     /**
      * 扫描依赖的 AAR 和 jar 中的字体文件
      */
-    fun scanDependencyFonts(project: Project): List<IconFontTtfFileModel> {
+    private fun scanDependencyFonts(project: Project): List<IconFontTtfFileModel> {
         val startTime = System.currentTimeMillis()
         logger.info("scanDependencyFonts: start")
         val results = mutableListOf<IconFontTtfFileModel>()
