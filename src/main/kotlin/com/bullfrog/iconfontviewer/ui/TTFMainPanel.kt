@@ -13,7 +13,6 @@ import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
-import com.sun.java.accessibility.util.AWTEventMonitor.addActionListener
 import java.awt.*
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent

@@ -4,10 +4,13 @@ package com.bullfrog.iconfontviewer.ui
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
 import java.awt.*
+import java.awt.event.ActionEvent
+import java.awt.event.ActionListener
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.JComponent
 import javax.swing.Timer
+import javax.swing.event.EventListenerList
 import kotlin.properties.Delegates
 
 class SwitchButton : JComponent() {
@@ -18,6 +21,7 @@ class SwitchButton : JComponent() {
 
     private var animationProgress = 0.0f
     private val animationTimer: Timer
+    private val listenerList = EventListenerList()
 
     private val trackColorOff = JBColor.namedColor("Slider.disabledBackground", Color(0x4c4f52))
     private val trackColorOn = JBColor.namedColor("Slider.background", Color(0x4c7fef))
@@ -36,9 +40,32 @@ class SwitchButton : JComponent() {
                 if (isEnabled) {
                     isSelected = !isSelected
                     firePropertyChange("selected", !isSelected, isSelected)
+                    fireActionPerformed(MouseEvent(this@SwitchButton, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, e?.x ?: 0, e?.y ?: 0, 1, false))
                 }
             }
         })
+    }
+
+    fun addActionListener(l: ActionListener) {
+        listenerList.add(ActionListener::class.java, l)
+    }
+
+    fun removeActionListener(l: ActionListener) {
+        listenerList.remove(ActionListener::class.java, l)
+    }
+
+    private fun fireActionPerformed(event: MouseEvent) {
+        val listeners = listenerList.listenerList
+        var e: ActionEvent? = null
+        for (i in listeners.indices step 2) {
+            if (listeners[i] == ActionListener::class.java) {
+                if (e == null) {
+                    val actionCommand = "switchChanged"
+                    e = ActionEvent(this, ActionEvent.ACTION_PERFORMED, actionCommand, event.`when`, event.modifiersEx)
+                }
+                (listeners[i + 1] as ActionListener).actionPerformed(e)
+            }
+        }
     }
 
     private fun animateSwitch(selected: Boolean) {

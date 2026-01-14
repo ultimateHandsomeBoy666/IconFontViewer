@@ -21,7 +21,7 @@ class IconFontState {
 class IconFontSettings : PersistentStateComponent<IconFontState>, Disposable {
 
     private var internalState = IconFontState()
-    val fontCache = HashMap<String, Font?>()
+    val fontCache = ConcurrentHashMap<String, Font?>()
     val iconPopupList = mutableListOf<IconFontPopupModel>()
 
 

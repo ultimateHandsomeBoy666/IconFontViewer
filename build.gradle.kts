@@ -13,10 +13,6 @@ repositories {
     mavenCentral()
     google()
     maven {
-        url = URI("http://mvnrepo.alibaba-inc.com/mvn/repository")
-        isAllowInsecureProtocol = true
-    }
-    maven {
         url = URI("http://www.jetbrains.com/intellij-repository/releases")
         isAllowInsecureProtocol = true
     }

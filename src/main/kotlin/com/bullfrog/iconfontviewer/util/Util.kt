@@ -68,7 +68,7 @@ private fun getResourceValueForElement(element: PsiElement): ResourceValue? {
 
     // 使用 ModuleResourceManagers 来准确查找字符串资源的值
     val manager = ResourceRepositoryManager.getInstance(androidFacet)
-    val stringResource = manager.appResources.getResources(ResourceNamespace.TODO(), ResourceType.STRING, resourceName)
+    val stringResource = manager.appResources.getResources(ResourceNamespace.RES_AUTO, ResourceType.STRING, resourceName)
 
 
     return if (stringResource.isNotEmpty()) {
