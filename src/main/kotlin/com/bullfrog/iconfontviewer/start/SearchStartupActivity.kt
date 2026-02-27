@@ -1,0 +1,72 @@
+
+package com.bullfrog.iconfontviewer.start
+
+import com.bullfrog.iconfontviewer.IconFontSettings
+import com.bullfrog.iconfontviewer.model.FontInfo
+import com.bullfrog.iconfontviewer.model.FontSource
+import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.progress.ProgressIndicator
+import com.intellij.openapi.progress.ProgressManager
+import com.intellij.openapi.progress.Task
+import com.intellij.openapi.project.DumbService
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.startup.StartupActivity
+import com.intellij.psi.search.FilenameIndex
+import com.intellij.psi.search.GlobalSearchScope
+
+class SearchStartupActivity : StartupActivity.DumbAware {
+
+    override fun runActivity(project: Project) {
+        DumbService.getInstance(project).runWhenSmart {
+            val task = object : Task.Backgroundable(project, "Scanning IconFont TTF Files", false) {
+                override fun run(indicator: ProgressIndicator) {
+                    ReadAction.run<Throwable> {
+                        scanForFonts(project, indicator)
+                    }
+                }
+            }
+            ProgressManager.getInstance().run(task)
+        }
+    }
+
+    companion object {
+        fun scanForFonts(project: Project, indicator: ProgressIndicator) {
+            indicator.text = "Searching for .ttf files..."
+            val settings = IconFontSettings.getInstance(project)
+            val existingPaths = settings.state.fontInfos.map { it.path }.toSet()
+
+            val scope = GlobalSearchScope.allScope(project)
+            val allTtfFiles = FilenameIndex.getAllFilenames(project)
+                .filter { it.endsWith(".ttf", ignoreCase = true) }
+
+            indicator.isIndeterminate = false
+            var processed = 0.0
+
+            allTtfFiles.forEach { filename ->
+                indicator.checkCanceled()
+                indicator.fraction = ++processed / allTtfFiles.size
+                indicator.text2 = "Processing: $filename"
+
+                val virtualFiles = FilenameIndex.getVirtualFilesByName(filename, scope)
+                for (file in virtualFiles) {
+                    if (file.path !in existingPaths) {
+                        val source = if (file.path.contains("/.gradle/caches/") || file.path.contains("/build/")) {
+                            FontSource.AAR
+                        } else {
+                            FontSource.PROJECT
+                        }
+
+                        val isIconFontHeuristic = filename.contains("icon", ignoreCase = true)
+
+                        val fontInfo = FontInfo(
+                            path = file.path,
+                            source = source,
+                            enabled = isIconFontHeuristic
+                        )
+                        settings.state.fontInfos.add(fontInfo)
+                    }
+                }
+            }
+        }
+    }
+}
