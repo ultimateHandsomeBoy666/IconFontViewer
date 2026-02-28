@@ -16,7 +16,7 @@
     <description><![CDATA[
     A tool to view icons in iconfont ttf file in the Android Studio gutter.</br>
     Only support TrueType ttf file.
-    Supports Android Studio Dolphin or newer version.
+    Supports Android Studio 2024.2 or newer version.
   ]]></description>
 
     <!-- Product and plugin compatibility requirements.
