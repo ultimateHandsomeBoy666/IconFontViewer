@@ -1,9 +1,7 @@
-import java.net.URI
-
 plugins {
     id("java")
-    id("org.jetbrains.kotlin.jvm") version "1.9.0"
-    id("org.jetbrains.intellij") version "1.13.1"
+    id("org.jetbrains.kotlin.jvm") version "2.0.21"
+    id("org.jetbrains.intellij.platform") version "2.1.0"
 }
 
 group = "com.bullfrog"
@@ -11,56 +9,37 @@ version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
-    google()
-    maven {
-        url = URI("http://mvnrepo.alibaba-inc.com/mvn/repository")
-        isAllowInsecureProtocol = true
+    intellijPlatform {
+        defaultRepositories()
     }
-    maven {
-        url = URI("http://www.jetbrains.com/intellij-repository/releases")
-        isAllowInsecureProtocol = true
-    }
-    maven {
-        url = URI("http://cache-redirector.jetbrains.com/intellij-dependencies")
-        isAllowInsecureProtocol = true
-    }
-
 }
 
-// Configure Gradle IntelliJ Plugin
-// Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
-intellij {
-    version.set("2022.3")
-    type.set("IC") // Target IDE Platform
-    plugins.set(listOf("Kotlin", "org.jetbrains.android", "java"))
+dependencies {
+    intellijPlatform {
+        androidStudio("2024.1.2.12")
+
+        // 添加 Android 插件依赖，才能使用 adtui、PsiElementFactory 等 API
+        bundledPlugin("org.jetbrains.android")
+        javaCompiler()
+    }
+}
+
+intellijPlatform {
+    pluginConfiguration {
+        name = "IconFontViewer"
+        ideaVersion {
+            sinceBuild = "241"
+            untilBuild = "251.*"
+        }
+    }
 }
 
 tasks {
-    // Set the JVM compatibility versions
     withType<JavaCompile> {
         sourceCompatibility = "17"
         targetCompatibility = "17"
     }
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-        kotlinOptions.jvmTarget = "17"
-    }
-
-    patchPluginXml {
-        sinceBuild.set("223")
-        untilBuild.set("251.*")
-    }
-
-    signPlugin {
-        certificateChain.set(System.getenv("CERTIFICATE_CHAIN"))
-        privateKey.set(System.getenv("PRIVATE_KEY"))
-        password.set(System.getenv("PRIVATE_KEY_PASSWORD"))
-    }
-
-    publishPlugin {
-        token.set(System.getenv("PUBLISH_TOKEN"))
-    }
-
-    runIde {
-        ideDir.set(file("/Applications/Android Studio.app/Contents"))
+        compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
