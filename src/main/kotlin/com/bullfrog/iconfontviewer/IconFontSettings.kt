@@ -1,7 +1,6 @@
 package com.bullfrog.iconfontviewer
 
 import com.bullfrog.iconfontviewer.model.FontInfo
-import com.bullfrog.iconfontviewer.model.IconFontPopupModel
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.*
 import com.intellij.openapi.project.Project
@@ -15,15 +14,13 @@ class IconFontState {
 
 @State(
     name = "com.bullfrog.iconfontviewer.IconFontSettings",
-    storages = [Storage("iconFontViewer.xml")] // 存储在项目配置目录 .idea/ 下
+    storages = [Storage("iconFontViewer.xml")]
 )
 @Service(Service.Level.PROJECT)
 class IconFontSettings : PersistentStateComponent<IconFontState>, Disposable {
 
     private var internalState = IconFontState()
-    val fontCache = HashMap<String, Font?>()
-    val iconPopupList = mutableListOf<IconFontPopupModel>()
-
+    val fontCache = ConcurrentHashMap<String, Font?>()
 
     override fun getState(): IconFontState {
         return internalState
@@ -35,7 +32,6 @@ class IconFontSettings : PersistentStateComponent<IconFontState>, Disposable {
 
     override fun dispose() {
         fontCache.clear()
-        iconPopupList.clear()
     }
 
     companion object {
