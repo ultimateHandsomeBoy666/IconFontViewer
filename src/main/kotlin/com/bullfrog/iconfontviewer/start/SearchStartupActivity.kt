@@ -4,6 +4,7 @@ package com.bullfrog.iconfontviewer.start
 import com.bullfrog.iconfontviewer.IconFontSettings
 import com.bullfrog.iconfontviewer.model.FontInfo
 import com.bullfrog.iconfontviewer.model.FontSource
+import com.bullfrog.iconfontviewer.util.ICONFONT_KEYWORDS
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
@@ -33,7 +34,7 @@ class SearchStartupActivity : StartupActivity.DumbAware {
         fun scanForFonts(project: Project, indicator: ProgressIndicator) {
             indicator.text = "Searching for .ttf files..."
             val settings = IconFontSettings.getInstance(project)
-            val existingPaths = settings.state.fontInfos.map { it.path }.toSet()
+            val existingPaths = settings.state.fontInfos.associateBy { it.path }
 
             val scope = GlobalSearchScope.allScope(project)
             val allTtfFiles = FilenameIndex.getAllFilenames(project)
@@ -42,6 +43,8 @@ class SearchStartupActivity : StartupActivity.DumbAware {
             indicator.isIndeterminate = false
             var processed = 0.0
 
+            val newFontInfos = mutableListOf<FontInfo>()
+
             allTtfFiles.forEach { filename ->
                 indicator.checkCanceled()
                 indicator.fraction = ++processed / allTtfFiles.size
@@ -49,23 +52,33 @@ class SearchStartupActivity : StartupActivity.DumbAware {
 
                 val virtualFiles = FilenameIndex.getVirtualFilesByName(filename, scope)
                 for (file in virtualFiles) {
-                    if (file.path !in existingPaths) {
-                        val source = if (file.path.contains("/.gradle/caches/") || file.path.contains("/build/")) {
-                            FontSource.AAR
-                        } else {
-                            FontSource.PROJECT
-                        }
-
-                        val isIconFontHeuristic = filename.contains("icon", ignoreCase = true)
-
-                        val fontInfo = FontInfo(
-                            path = file.path,
-                            source = source,
-                            enabled = isIconFontHeuristic
-                        )
-                        settings.state.fontInfos.add(fontInfo)
+                    val existing = existingPaths[file.path]
+                    if (existing != null) {
+                        // 已有记录：保留用户的 enabled 选择，不覆盖
+                        continue
                     }
+
+                    val source = if (file.path.contains("/.gradle/caches/") || file.path.contains("/build/")) {
+                        FontSource.AAR
+                    } else {
+                        FontSource.PROJECT
+                    }
+
+                    // 智能检测：文件名包含关键词的默认启用
+                    val isIconFont = ICONFONT_KEYWORDS.any { keyword ->
+                        filename.contains(keyword, ignoreCase = true)
+                    }
+
+                    newFontInfos.add(FontInfo(
+                        path = file.path,
+                        source = source,
+                        enabled = isIconFont
+                    ))
                 }
+            }
+
+            if (newFontInfos.isNotEmpty()) {
+                settings.state.fontInfos.addAll(newFontInfos)
             }
         }
     }

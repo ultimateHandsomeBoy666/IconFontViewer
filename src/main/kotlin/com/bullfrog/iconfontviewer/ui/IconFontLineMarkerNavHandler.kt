@@ -1,7 +1,6 @@
 package com.bullfrog.iconfontviewer.ui
 
 import com.android.tools.adtui.LightCalloutPopup
-import com.bullfrog.iconfontviewer.IconFontSettings
 import com.bullfrog.iconfontviewer.model.IconFontPopupModel
 import com.bullfrog.iconfontviewer.util.*
 import com.intellij.codeInsight.daemon.GutterIconNavigationHandler
@@ -11,8 +10,8 @@ import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementFactory
-import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiReferenceExpression
+import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlTag
@@ -30,43 +29,49 @@ import javax.swing.*
 import javax.swing.event.DocumentEvent
 
 
-class IconFontLineMarkerNavHandler : GutterIconNavigationHandler<PsiElement> {
+class IconFontLineMarkerNavHandler(
+    private val smartPointer: SmartPsiElementPointer<PsiElement>,
+    private val matchedFont: java.awt.Font,
+    private val fontPath: String
+) : GutterIconNavigationHandler<PsiElement> {
 
     private lateinit var searchTextField: SearchTextField
 
-    private var psiElement: PsiElement? = null //TODO 这里会不会有内存泄漏？
-
     private val speedSearch = SpeedSearch().apply {
         setEnabled(true)
-        addChangeListener {
-            iconFontListModel?.refilter()
-        }
     }
 
-    private var iconFontListModel: NameFilteringListModel<IconFontPopupModel>? = null
+    override fun navigate(e: MouseEvent?, elt: PsiElement?) {
+        val element = smartPointer.element ?: return
 
-    fun setPsiElement(psiElement: PsiElement?) {
-        if (psiElement == null) {
-            return
-        }
-        if (PsiManager.getInstance(psiElement.project).areElementsEquivalent(psiElement, this.psiElement)) {
-            return
-        }
-        this.psiElement = psiElement
-        iconFontListModel = NameFilteringListModel<IconFontPopupModel>(
-            CollectionListModel(IconFontSettings.getInstance(psiElement.project).iconPopupList),
+        val iconList = buildIconListForFont(matchedFont, fontPath, element)
+        if (iconList.isEmpty()) return
+
+        val collectionModel = CollectionListModel(iconList)
+        val filteringModel = NameFilteringListModel<IconFontPopupModel>(
+            collectionModel,
             { it.key },
             speedSearch::shouldBeShowing,
             { StringUtil.notNullize(speedSearch.filter) }
         )
-    }
 
-    override fun navigate(e: MouseEvent?, elt: PsiElement?) {
+        speedSearch.addChangeListener {
+            filteringModel.refilter()
+        }
+
         val popup = LightCalloutPopup(null, null, null)
-        popup.show(buildPopupPanel(), null, MouseInfo.getPointerInfo().location, Balloon.Position.below)
+        popup.show(
+            buildPopupPanel(filteringModel, element),
+            null,
+            MouseInfo.getPointerInfo().location,
+            Balloon.Position.below
+        )
     }
 
-    private fun buildPopupPanel(): JPanel {
+    private fun buildPopupPanel(
+        listModel: NameFilteringListModel<IconFontPopupModel>,
+        element: PsiElement
+    ): JPanel {
         return JPanel().apply {
             preferredSize = Dimension(300.jbScale(), 450.jbScale())
             layout = BorderLayout()
@@ -91,11 +96,11 @@ class IconFontLineMarkerNavHandler : GutterIconNavigationHandler<PsiElement> {
                     preferredSize = Dimension(300.jbScale(), 400.jbScale())
                     viewport.view = JList<IconFontPopupModel>().apply {
                         border = JBUI.Borders.empty(4.jbScale(), 8.jbScale())
-                        model = iconFontListModel
+                        model = listModel
                         cellRenderer = PopupListCellRenderer()
                         addListSelectionListener {
                             if (it.valueIsAdjusting) return@addListSelectionListener
-                            updatePsiElement(selectedValue)
+                            updatePsiElement(selectedValue, element)
                         }
                     }
                     border = BorderFactory.createEmptyBorder()
@@ -136,13 +141,12 @@ class IconFontLineMarkerNavHandler : GutterIconNavigationHandler<PsiElement> {
                     text = value?.key ?: ""
                 })
             }
-
         }
     }
 
-    private fun updatePsiElement(popupModel: IconFontPopupModel?) {
+    private fun updatePsiElement(popupModel: IconFontPopupModel?, currentElement: PsiElement) {
         val model = popupModel ?: return
-        val element = psiElement ?: return
+        val element = smartPointer.element ?: return
         ApplicationManager.getApplication().invokeLater {
             WriteCommandAction.runWriteCommandAction(
                 element.project,
@@ -157,12 +161,11 @@ class IconFontLineMarkerNavHandler : GutterIconNavigationHandler<PsiElement> {
                             } else {
                                 KtPsiFactory(element.project).createExpression(R_PREFIX + model.key)
                             }
-                            psiElement = element.replace(expression)
+                            element.replace(expression)
                         }
                         element.isValidLayoutXmlElement() -> {
                             val parent = PsiTreeUtil.getParentOfType(element, XmlAttribute::class.java)
                             parent?.setValue(XML_PREFIX + model.key)
-                            psiElement = parent?.valueElement ?: element
                         }
                         element.isValidResXmlToken() -> {
                             val xmlTagValue = (element as? XmlTag)?.value
@@ -173,5 +176,4 @@ class IconFontLineMarkerNavHandler : GutterIconNavigationHandler<PsiElement> {
             )
         }
     }
-
 }

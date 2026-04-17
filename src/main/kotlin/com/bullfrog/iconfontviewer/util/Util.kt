@@ -8,56 +8,85 @@ import com.bullfrog.iconfontviewer.IconFontSettings
 import com.bullfrog.iconfontviewer.ui.IconFromIconFontCharacter
 import com.intellij.psi.PsiElement
 import org.jetbrains.android.facet.AndroidFacet
-import com.android.tools.idea.res.ResourceRepositoryManager
-import com.android.tools.idea.ui.resourcemanager.model.getDependentModuleResources
-import com.android.tools.idea.ui.resourcemanager.model.getLibraryResources
-import com.android.tools.idea.ui.resourcemanager.model.getModuleResources
+import com.android.tools.idea.res.StudioResourceRepositoryManager
 import com.bullfrog.iconfontviewer.model.IconFontPopupModel
 import java.awt.Font
 import java.io.File
 import java.util.*
 import javax.swing.Icon
 
+/**
+ * 图标匹配结果，包含渲染后的图标和匹配的字体信息
+ */
+data class IconMatchResult(
+    val icon: Icon,
+    val font: Font,
+    val fontPath: String
+)
+
 fun getString(key: String): String {
     val bundle = ResourceBundle.getBundle("strings")
     return bundle.getString(key)
 }
 
-fun getIconForElement(element: PsiElement): Icon? {
+/**
+ * 根据 PSI 元素获取 iconfont 图标。
+ * 返回 IconMatchResult（包含图标和匹配的字体信息），或 null（未找到匹配字体）。
+ */
+fun getIconForElement(element: PsiElement): IconMatchResult? {
     val instance = IconFontSettings.getInstance(element.project)
-    val enabledFonts = instance.state.fontInfos
-        .filter { it.enabled }
-        .mapNotNull { fontInfo ->
-            instance.fontCache.computeIfAbsent(fontInfo.path) { path ->
-                try {
-                    Font.createFont(Font.TRUETYPE_FONT, File(path)).deriveFont(IconFromIconFontCharacter.FONT_SIZE)
-                } catch (e: Exception) {
-                    // Log error or notify user
-                    e.printStackTrace()
-                    null
-                }
-            }
-        }
+    val enabledFontInfos = instance.state.fontInfos.filter { it.enabled }
 
-    if (enabledFonts.isEmpty()) {
-        return null
-    }
-
-//    return getResources(element, enabledFonts, instance)
+    if (enabledFontInfos.isEmpty()) return null
 
     val resourceValue = getResourceValueForElement(element) ?: return null
-    val charText = resourceValue.value
-    val key = resourceValue.name
+    val charText = resourceValue.value ?: return null
 
-    for (font in enabledFonts) {
+    for (fontInfo in enabledFontInfos) {
+        val font = instance.fontCache.computeIfAbsent(fontInfo.path) { path ->
+            try {
+                Font.createFont(Font.TRUETYPE_FONT, File(path))
+                    .deriveFont(IconFromIconFontCharacter.FONT_SIZE)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        } ?: continue
+
         if (font.canDisplayUpTo(charText) == -1) {
             val icon = IconFromIconFontCharacter(charText, font)
-            instance.iconPopupList.add(IconFontPopupModel(icon, key, charText))
-            return icon
+            return IconMatchResult(icon, font, fontInfo.path)
         }
     }
 
     return null
+}
+
+/**
+ * 为指定字体构建所有可用图标的列表（用于弹窗展示）。
+ * 遍历项目中的所有 string 资源，筛选出该字体能渲染的字符。
+ */
+fun buildIconListForFont(font: Font, fontPath: String, element: PsiElement): List<IconFontPopupModel> {
+    val androidFacet = AndroidFacet.getInstance(element) ?: return emptyList()
+    val manager = StudioResourceRepositoryManager.getInstance(androidFacet)
+    val namespace = ResourceNamespace.TODO()
+    val allNames = manager.appResources.getResourceNames(namespace, ResourceType.STRING)
+
+    val result = mutableListOf<IconFontPopupModel>()
+
+    for (name in allNames) {
+        val items = manager.appResources.getResources(namespace, ResourceType.STRING, name)
+        if (items.isEmpty()) continue
+        val resourceValue = items[0].resourceValue ?: continue
+        val charText = resourceValue.value ?: continue
+
+        if (charText.isNotEmpty() && font.canDisplayUpTo(charText) == -1) {
+            val icon = IconFromIconFontCharacter(charText, font)
+            result.add(IconFontPopupModel(icon, name, charText))
+        }
+    }
+
+    return result
 }
 
 private fun getResourceValueForElement(element: PsiElement): ResourceValue? {
@@ -66,37 +95,14 @@ private fun getResourceValueForElement(element: PsiElement): ResourceValue? {
     val resourceName = element.removePrefix()
     if (resourceName.isBlank()) return null
 
-    // 使用 ModuleResourceManagers 来准确查找字符串资源的值
-    val manager = ResourceRepositoryManager.getInstance(androidFacet)
-    val stringResource = manager.appResources.getResources(ResourceNamespace.TODO(), ResourceType.STRING, resourceName)
-
+    val manager = StudioResourceRepositoryManager.getInstance(androidFacet)
+    val stringResource = manager.appResources.getResources(
+        ResourceNamespace.TODO(), ResourceType.STRING, resourceName
+    )
 
     return if (stringResource.isNotEmpty()) {
         stringResource[0].resourceValue
     } else {
         null
     }
-}
-
-private fun getResources(psiElement: PsiElement, enabledFonts: List<Font>, instance: IconFontSettings): Icon? {
-    val resourceType = ResourceType.STRING
-    val androidFacet = AndroidFacet.getInstance(psiElement) ?: return null
-    val stringModuleAssets = getModuleResources(androidFacet, resourceType, emptyList()).assetSets
-    val stringDependentAssets = getDependentModuleResources(androidFacet, resourceType, emptyList()).flatMap { it.assetSets }
-    val stringLibraryAssets = getLibraryResources(androidFacet, resourceType, emptyList()).flatMap { it.assetSets }
-    val assetList = stringModuleAssets + stringDependentAssets + stringLibraryAssets
-
-    assetList.forEach {
-        val asset = it.assets.first()
-        val charText = asset.resourceItem.resourceValue.value
-        val key = asset.name
-        for (font in enabledFonts) {
-            if (font.canDisplayUpTo(charText) == -1) {
-                val icon = IconFromIconFontCharacter(charText, font)
-                instance.iconPopupList.add(IconFontPopupModel(icon, key, charText))
-                return icon
-            }
-        }
-    }
-    return null
 }

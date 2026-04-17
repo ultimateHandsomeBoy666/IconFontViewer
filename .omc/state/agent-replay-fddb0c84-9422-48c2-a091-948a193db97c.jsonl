@@ -1,0 +1,5 @@
+{"t":0,"agent":"system","event":"keyword_detected","keyword":"deep-interview"}
+{"t":0,"agent":"aa796d6","agent_type":"Explore","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"aa796d6","agent_type":"Explore","event":"agent_stop","success":true,"duration_ms":129889}
+{"t":0,"agent":"system","event":"keyword_detected","keyword":"deep-interview"}
+{"t":0,"agent":"system","event":"keyword_detected","keyword":"deep-interview"}
