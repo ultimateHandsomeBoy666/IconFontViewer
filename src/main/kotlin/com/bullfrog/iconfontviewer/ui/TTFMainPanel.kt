@@ -184,7 +184,11 @@ class TTFMainPanel(private val project: Project) : JPanel() {
 
     private fun rescanProject() {
         ProgressManager.getInstance().run(object : Task.Backgroundable(project, "Rescanning…", true) {
-            override fun run(ind: com.intellij.openapi.progress.ProgressIndicator) = SearchStartupActivity.scanForFonts(project, ind)
+            override fun run(ind: com.intellij.openapi.progress.ProgressIndicator) {
+                com.intellij.openapi.application.ReadAction.run<Throwable> {
+                    SearchStartupActivity.scanForFonts(project, ind)
+                }
+            }
             override fun onSuccess() = SwingUtilities.invokeLater { refreshList() }
         })
     }
