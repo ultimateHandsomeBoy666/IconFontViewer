@@ -80,13 +80,34 @@ fun buildIconListForFont(font: Font, fontPath: String, element: PsiElement): Lis
         val resourceValue = items[0].resourceValue ?: continue
         val charText = resourceValue.value ?: continue
 
-        if (charText.isNotEmpty() && font.canDisplayUpTo(charText) == -1) {
+        // 只保留看起来像 iconfont 字符的 string 资源：
+        // 1. 长度为 1-2（单个 Unicode 字符，包括 surrogate pair）
+        // 2. 字符在 Private Use Area (U+E000-U+F8FF, U+F0000-U+FFFFD) 或其他非常规区域
+        if (!looksLikeIconChar(charText)) continue
+
+        if (font.canDisplayUpTo(charText) == -1) {
             val icon = IconFromIconFontCharacter(charText, font)
             result.add(IconFontPopupModel(icon, name, charText))
         }
     }
 
     return result
+}
+
+/**
+ * 判断一个 string 值是否看起来像 iconfont 字符。
+ * Icon font 的值通常是单个 Unicode 字符，且位于 Private Use Area 或非 ASCII 区域。
+ */
+private fun looksLikeIconChar(text: String): Boolean {
+    if (text.isEmpty()) return false
+    // 最多 2 个 char（支持 surrogate pair 表示的高位 Unicode）
+    if (text.length > 2) return false
+    val codePoint = text.codePointAt(0)
+    // Private Use Area: U+E000-U+F8FF (BMP PUA)
+    // Supplementary PUA-A: U+F0000-U+FFFFF
+    // Supplementary PUA-B: U+100000-U+10FFFD
+    // 也接受其他非 ASCII、非常见文字的字符（> U+2000）
+    return codePoint >= 0x2000
 }
 
 private fun getResourceValueForElement(element: PsiElement): ResourceValue? {
