@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1776408946367,
+  "lastScanned": 1776668767654,
   "projectRoot": "/Users/guozhexuan/AndroidStudioProjects/IconFontViewer",
   "techStack": {
     "languages": [
@@ -44,7 +44,7 @@
       "path": "build",
       "purpose": "Build output",
       "fileCount": 1,
-      "lastAccessed": 1776408946353,
+      "lastAccessed": 1776668767636,
       "keyFiles": [
         "coroutines-javaagent.jar"
       ]
@@ -53,34 +53,52 @@
       "path": "gradle",
       "purpose": null,
       "fileCount": 0,
-      "lastAccessed": 1776408946353,
+      "lastAccessed": 1776668767636,
       "keyFiles": []
     },
     "src": {
       "path": "src",
       "purpose": "Source code",
       "fileCount": 0,
-      "lastAccessed": 1776408946354,
+      "lastAccessed": 1776668767636,
       "keyFiles": []
     }
   },
   "hotPaths": [
     {
       "path": "src/main/kotlin/com/bullfrog/iconfontviewer/ui/TTFMainPanel.kt",
-      "accessCount": 15,
-      "lastAccessed": 1776485694703,
+      "accessCount": 17,
+      "lastAccessed": 1776505537963,
       "type": "file"
     },
     {
       "path": "src/main/kotlin/com/bullfrog/iconfontviewer/util/Util.kt",
-      "accessCount": 10,
-      "lastAccessed": 1776429324489,
+      "accessCount": 13,
+      "lastAccessed": 1776672168757,
+      "type": "file"
+    },
+    {
+      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/ui/IconFontLineMarkerNavHandler.kt",
+      "accessCount": 8,
+      "lastAccessed": 1776673168976,
       "type": "file"
     },
     {
       "path": "src/main/kotlin/com/bullfrog/iconfontviewer/start/SearchStartupActivity.kt",
       "accessCount": 7,
       "lastAccessed": 1776493737914,
+      "type": "file"
+    },
+    {
+      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/ui/IconFontLineMarkerProvider.kt",
+      "accessCount": 7,
+      "lastAccessed": 1776673155549,
+      "type": "file"
+    },
+    {
+      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/util/extensions.kt",
+      "accessCount": 7,
+      "lastAccessed": 1776678212330,
       "type": "file"
     },
     {
@@ -93,18 +111,6 @@
       "path": "src/main/kotlin/com/bullfrog/iconfontviewer/IconFontSettings.kt",
       "accessCount": 3,
       "lastAccessed": 1776413421622,
-      "type": "file"
-    },
-    {
-      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/ui/IconFontLineMarkerProvider.kt",
-      "accessCount": 3,
-      "lastAccessed": 1776413480736,
-      "type": "file"
-    },
-    {
-      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/ui/IconFontLineMarkerNavHandler.kt",
-      "accessCount": 3,
-      "lastAccessed": 1776413480974,
       "type": "file"
     },
     {
@@ -126,12 +132,6 @@
       "type": "file"
     },
     {
-      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/util/extensions.kt",
-      "accessCount": 2,
-      "lastAccessed": 1776413376095,
-      "type": "file"
-    },
-    {
       "path": "src/main/kotlin/com/bullfrog/iconfontviewer/ui/TTFInputDialog.kt",
       "accessCount": 2,
       "lastAccessed": 1776413577834,
@@ -150,6 +150,12 @@
       "type": "file"
     },
     {
+      "path": "src/main/resources/META-INF/plugin.xml",
+      "accessCount": 2,
+      "lastAccessed": 1776505369324,
+      "type": "file"
+    },
+    {
       "path": "gradle.properties",
       "accessCount": 1,
       "lastAccessed": 1776410996818,
@@ -165,12 +171,6 @@
       "path": "PRD.md",
       "accessCount": 1,
       "lastAccessed": 1776410996905,
-      "type": "file"
-    },
-    {
-      "path": "src/main/resources/META-INF/plugin.xml",
-      "accessCount": 1,
-      "lastAccessed": 1776410997043,
       "type": "file"
     },
     {

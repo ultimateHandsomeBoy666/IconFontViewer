@@ -24,6 +24,7 @@ import com.intellij.util.ui.JBEmptyBorder
 import com.intellij.util.ui.JBUI
 import org.jetbrains.kotlin.psi.KtPsiFactory
 import java.awt.*
+import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.*
 import javax.swing.event.DocumentEvent
@@ -61,7 +62,7 @@ class IconFontLineMarkerNavHandler(
 
         val popup = LightCalloutPopup(null, null, null)
         popup.show(
-            buildPopupPanel(filteringModel, element),
+            buildPopupPanel(filteringModel, popup),
             null,
             MouseInfo.getPointerInfo().location,
             Balloon.Position.below
@@ -70,7 +71,7 @@ class IconFontLineMarkerNavHandler(
 
     private fun buildPopupPanel(
         listModel: NameFilteringListModel<IconFontPopupModel>,
-        element: PsiElement
+        popup: LightCalloutPopup
     ): JPanel {
         return JPanel().apply {
             preferredSize = Dimension(300.jbScale(), 450.jbScale())
@@ -98,10 +99,16 @@ class IconFontLineMarkerNavHandler(
                         border = JBUI.Borders.empty(4.jbScale(), 8.jbScale())
                         model = listModel
                         cellRenderer = PopupListCellRenderer()
-                        addListSelectionListener {
-                            if (it.valueIsAdjusting) return@addListSelectionListener
-                            updatePsiElement(selectedValue, element)
-                        }
+                        // 用 MouseListener 替代 ListSelectionListener，避免选择变化时误触发替换
+                        addMouseListener(object : MouseAdapter() {
+                            override fun mouseClicked(e: MouseEvent) {
+                                val idx = locationToIndex(e.point)
+                                if (idx < 0) return
+                                val selected = listModel.getElementAt(idx) ?: return
+                                doReplace(selected)
+                                popup.close()
+                            }
+                        })
                     }
                     border = BorderFactory.createEmptyBorder()
                 },
@@ -144,13 +151,12 @@ class IconFontLineMarkerNavHandler(
         }
     }
 
-    private fun updatePsiElement(popupModel: IconFontPopupModel?, currentElement: PsiElement) {
-        val model = popupModel ?: return
+    private fun doReplace(model: IconFontPopupModel) {
         val element = smartPointer.element ?: return
         ApplicationManager.getApplication().invokeLater {
             WriteCommandAction.runWriteCommandAction(
                 element.project,
-                "replace",
+                "Replace IconFont",
                 null,
                 {
                     when {
@@ -167,9 +173,14 @@ class IconFontLineMarkerNavHandler(
                             val parent = PsiTreeUtil.getParentOfType(element, XmlAttribute::class.java)
                             parent?.setValue(XML_PREFIX + model.key)
                         }
+                        element.isStringResourceTagName() -> {
+                            // strings.xml: 从 token 向上找到父 XmlTag，替换文本内容
+                            val xmlTag = element.getParentStringResourceTag() ?: return@runWriteCommandAction
+                            xmlTag.value.setText(model.text)
+                        }
                         element.isValidResXmlToken() -> {
                             val xmlTagValue = (element as? XmlTag)?.value
-                            xmlTagValue?.setText(XML_PREFIX + model.key)
+                            xmlTagValue?.setText(model.text)
                         }
                     }
                 }
