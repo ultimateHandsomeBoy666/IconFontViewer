@@ -109,6 +109,15 @@ class TTFMainPanel(private val project: Project) : JPanel() {
         fontList.fixedCellHeight = itemH
         fontList.selectionMode = ListSelectionModel.SINGLE_SELECTION
 
+        // hover 时显示完整路径 tooltip
+        fontList.toolTipText = ""
+        fontList.addMouseMotionListener(object : MouseAdapter() {
+            override fun mouseMoved(e: MouseEvent) {
+                val i = fontList.locationToIndex(e.point)
+                fontList.toolTipText = if (i >= 0 && i < listModel.size) listModel.getElementAt(i).path else null
+            }
+        })
+
         fontList.addMouseMotionListener(object : MouseAdapter() {
             override fun mouseMoved(e: MouseEvent) {
                 val i = fontList.locationToIndex(e.point)

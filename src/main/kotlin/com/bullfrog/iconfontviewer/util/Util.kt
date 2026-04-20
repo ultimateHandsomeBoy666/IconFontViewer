@@ -110,6 +110,35 @@ private fun looksLikeIconChar(text: String): Boolean {
     return codePoint >= 0x2000
 }
 
+/**
+ * 为 strings.xml 中的 <string> 标签获取图标。
+ * 直接读取标签的文本内容作为 Unicode 字符，无需查找资源。
+ */
+fun getIconForStringResourceTag(element: PsiElement): IconMatchResult? {
+    val charText = element.getStringTagValue() ?: return null
+    if (!looksLikeIconChar(charText)) return null
+
+    val instance = IconFontSettings.getInstance(element.project)
+    val enabledFontInfos = instance.state.fontInfos.filter { it.enabled }
+
+    for (fontInfo in enabledFontInfos) {
+        val font = instance.fontCache.computeIfAbsent(fontInfo.path) { path ->
+            try {
+                Font.createFont(Font.TRUETYPE_FONT, File(path))
+                    .deriveFont(IconFromIconFontCharacter.FONT_SIZE)
+            } catch (e: Exception) {
+                null
+            }
+        } ?: continue
+
+        if (font.canDisplayUpTo(charText) == -1) {
+            val icon = IconFromIconFontCharacter(charText, font)
+            return IconMatchResult(icon, font, fontInfo.path)
+        }
+    }
+    return null
+}
+
 private fun getResourceValueForElement(element: PsiElement): ResourceValue? {
     val androidFacet = AndroidFacet.getInstance(element) ?: return null
 
