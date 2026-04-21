@@ -111,13 +111,12 @@ class SearchStartupActivity : StartupActivity.DumbAware {
             indicator.fraction = 0.9
             indicator.text = "Finalizing..."
 
-            // ── 清理已不存在的文件（用户手动添加的除外）──
+            // ── 清理已不存在的文件 ──
             val removedPaths = mutableListOf<String>()
             settings.mutateFontInfos { fontInfos ->
                 fontInfos.removeAll { fi ->
-                    val shouldRemove = fi.source != FontSource.USER &&
-                        fi.path !in discoveredPaths &&
-                        !File(fi.path).exists()
+                    val shouldRemove = !File(fi.path).exists() &&
+                        fi.path !in discoveredPaths
                     if (shouldRemove) {
                         removedPaths.add(fi.path)
                     }
