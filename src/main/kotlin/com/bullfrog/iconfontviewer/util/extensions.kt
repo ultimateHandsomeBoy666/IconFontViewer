@@ -20,8 +20,41 @@ fun PsiElement.isValidExpression(): Boolean {
     return true
 }
 
+fun PsiElement.isLeafOfRStringExpression(): Boolean {
+    if (this.firstChild != null) return false
+    val expr = findParentRStringExpression() ?: return false
+    var first: PsiElement = expr
+    while (first.firstChild != null) first = first.firstChild
+    return first === this
+}
+
+fun PsiElement.findParentRStringExpression(): PsiElement? {
+    var current: PsiElement? = this.parent
+    while (current != null) {
+        if ((current is KtDotQualifiedExpression || current is PsiReferenceExpression)
+            && current.text.startsWith(R_PREFIX)) {
+            val p = current.parent
+            if ((p is KtDotQualifiedExpression || p is PsiReferenceExpression)
+                && p.text.startsWith(R_PREFIX)) {
+                current = p
+                continue
+            }
+            return current
+        }
+        current = current.parent
+    }
+    return null
+}
+
 fun PsiElement.isValidLayoutXmlElement(): Boolean {
     return this is XmlAttributeValue && this.text.contains(XML_PREFIX)
+}
+
+fun PsiElement.isLeafOfXmlStringAttribute(): Boolean {
+    if (this !is XmlToken) return false
+    if (this.tokenType != XmlTokenType.XML_ATTRIBUTE_VALUE_TOKEN) return false
+    if (!this.text.contains(XML_PREFIX)) return false
+    return true
 }
 
 /**
