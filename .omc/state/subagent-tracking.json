@@ -1,7 +1,17 @@
 {
-  "agents": [],
-  "total_spawned": 0,
-  "total_completed": 0,
+  "agents": [
+    {
+      "agent_id": "a65d958300791e451",
+      "agent_type": "superpowers:code-reviewer",
+      "started_at": "2026-04-20T13:11:11.437Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-04-20T13:13:40.999Z",
+      "duration_ms": 149562
+    }
+  ],
+  "total_spawned": 1,
+  "total_completed": 1,
   "total_failed": 0,
-  "last_updated": "2026-04-20T09:48:00.525Z"
+  "last_updated": "2026-04-20T13:17:32.557Z"
 }
