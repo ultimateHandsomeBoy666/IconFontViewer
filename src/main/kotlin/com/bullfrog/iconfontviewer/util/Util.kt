@@ -5,8 +5,10 @@ import com.android.ide.common.rendering.api.ResourceNamespace
 import com.android.ide.common.rendering.api.ResourceValue
 import com.android.resources.ResourceType
 import com.bullfrog.iconfontviewer.IconFontSettings
+import com.bullfrog.iconfontviewer.model.FontInfo
 import com.bullfrog.iconfontviewer.ui.IconFromIconFontCharacter
 import com.intellij.psi.PsiElement
+import com.intellij.psi.util.PsiModificationTracker
 import org.jetbrains.android.facet.AndroidFacet
 import com.android.tools.idea.res.StudioResourceRepositoryManager
 import com.bullfrog.iconfontviewer.model.IconFontPopupModel
@@ -24,6 +26,13 @@ data class IconMatchResult(
     val fontPath: String
 )
 
+private data class IconListCacheEntry(
+    val modificationCount: Long,
+    val icons: List<IconFontPopupModel>
+)
+
+private val FAILED_FONT_SENTINEL = Font("Dialog", Font.PLAIN, 1)
+
 fun getString(key: String): String {
     val bundle = ResourceBundle.getBundle("strings")
     return bundle.getString(key)
@@ -35,31 +44,14 @@ fun getString(key: String): String {
  */
 fun getIconForElement(element: PsiElement): IconMatchResult? {
     val instance = IconFontSettings.getInstance(element.project)
-    val enabledFontInfos = instance.state.fontInfos.filter { it.enabled }
+    val enabledFontInfos = instance.getFontInfosSnapshot().filter { it.enabled }
 
     if (enabledFontInfos.isEmpty()) return null
 
     val resourceValue = getResourceValueForElement(element) ?: return null
     val charText = resourceValue.value ?: return null
 
-    for (fontInfo in enabledFontInfos) {
-        val font = instance.fontCache.computeIfAbsent(fontInfo.path) { path ->
-            try {
-                Font.createFont(Font.TRUETYPE_FONT, File(path))
-                    .deriveFont(IconFromIconFontCharacter.FONT_SIZE)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                null
-            }
-        } ?: continue
-
-        if (font.canDisplayUpTo(charText) == -1) {
-            val icon = IconFromIconFontCharacter(charText, font)
-            return IconMatchResult(icon, font, fontInfo.path)
-        }
-    }
-
-    return null
+    return findMatchForChar(instance, enabledFontInfos, charText)
 }
 
 /**
@@ -67,9 +59,17 @@ fun getIconForElement(element: PsiElement): IconMatchResult? {
  * 遍历项目中的所有 string 资源，筛选出该字体能渲染的字符。
  */
 fun buildIconListForFont(font: Font, fontPath: String, element: PsiElement): List<IconFontPopupModel> {
+    val settings = IconFontSettings.getInstance(element.project)
+    val modificationCount = PsiModificationTracker.getInstance(element.project).modificationCount
+    @Suppress("UNCHECKED_CAST")
+    val cached = settings.iconListCache[fontPath] as? IconListCacheEntry
+    cached?.takeIf { it.modificationCount == modificationCount }?.let {
+        return it.icons
+    }
+
     val androidFacet = AndroidFacet.getInstance(element) ?: return emptyList()
     val manager = StudioResourceRepositoryManager.getInstance(androidFacet)
-    val namespace = ResourceNamespace.TODO()
+    val namespace = ResourceNamespace.RES_AUTO
     val allNames = manager.appResources.getResourceNames(namespace, ResourceType.STRING)
 
     val result = mutableListOf<IconFontPopupModel>()
@@ -91,7 +91,9 @@ fun buildIconListForFont(font: Font, fontPath: String, element: PsiElement): Lis
         }
     }
 
-    return result
+    val immutable = result.toList()
+    settings.iconListCache[fontPath] = IconListCacheEntry(modificationCount, immutable)
+    return immutable
 }
 
 /**
@@ -119,24 +121,8 @@ fun getIconForStringResourceTag(element: PsiElement): IconMatchResult? {
     if (!looksLikeIconChar(charText)) return null
 
     val instance = IconFontSettings.getInstance(element.project)
-    val enabledFontInfos = instance.state.fontInfos.filter { it.enabled }
-
-    for (fontInfo in enabledFontInfos) {
-        val font = instance.fontCache.computeIfAbsent(fontInfo.path) { path ->
-            try {
-                Font.createFont(Font.TRUETYPE_FONT, File(path))
-                    .deriveFont(IconFromIconFontCharacter.FONT_SIZE)
-            } catch (e: Exception) {
-                null
-            }
-        } ?: continue
-
-        if (font.canDisplayUpTo(charText) == -1) {
-            val icon = IconFromIconFontCharacter(charText, font)
-            return IconMatchResult(icon, font, fontInfo.path)
-        }
-    }
-    return null
+    val enabledFontInfos = instance.getFontInfosSnapshot().filter { it.enabled }
+    return findMatchForChar(instance, enabledFontInfos, charText)
 }
 
 private fun getResourceValueForElement(element: PsiElement): ResourceValue? {
@@ -147,7 +133,7 @@ private fun getResourceValueForElement(element: PsiElement): ResourceValue? {
 
     val manager = StudioResourceRepositoryManager.getInstance(androidFacet)
     val stringResource = manager.appResources.getResources(
-        ResourceNamespace.TODO(), ResourceType.STRING, resourceName
+        ResourceNamespace.RES_AUTO, ResourceType.STRING, resourceName
     )
 
     return if (stringResource.isNotEmpty()) {
@@ -155,4 +141,32 @@ private fun getResourceValueForElement(element: PsiElement): ResourceValue? {
     } else {
         null
     }
+}
+
+private fun findMatchForChar(
+    settings: IconFontSettings,
+    enabledFontInfos: List<FontInfo>,
+    charText: String
+): IconMatchResult? {
+    for (fontInfo in enabledFontInfos) {
+        val font = loadFontFromCache(settings, fontInfo.path) ?: continue
+        if (font.canDisplayUpTo(charText) == -1) {
+            val icon = IconFromIconFontCharacter(charText, font)
+            return IconMatchResult(icon, font, fontInfo.path)
+        }
+    }
+    return null
+}
+
+private fun loadFontFromCache(settings: IconFontSettings, fontPath: String): Font? {
+    val cached = settings.fontCache.computeIfAbsent(fontPath) { path ->
+        try {
+            Font.createFont(Font.TRUETYPE_FONT, File(path))
+                .deriveFont(IconFromIconFontCharacter.FONT_SIZE)
+        } catch (_: Exception) {
+            FAILED_FONT_SENTINEL
+        }
+    } ?: return null
+
+    return if (cached === FAILED_FONT_SENTINEL) null else cached
 }

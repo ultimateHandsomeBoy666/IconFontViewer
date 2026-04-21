@@ -37,7 +37,7 @@ class IconFromIconFontCharacter(
     private fun drawString(g: Graphics, x: Float, y: Float) {
         font?.let {
             val graphics = g as Graphics2D
-            graphics.color = JBColor.BLACK //Otherwise the text would be white
+            graphics.color = JBColor.foreground()
             graphics.font = it
             val gv = graphics.font.createGlyphVector(
                 FontRenderContext(null, true, false),

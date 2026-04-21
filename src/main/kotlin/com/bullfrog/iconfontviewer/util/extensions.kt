@@ -6,10 +6,28 @@ import com.intellij.psi.xml.*
 import com.intellij.ui.scale.JBUIScale
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 
+private val HEX_CHAR_REF = Regex("&#x([0-9a-fA-F]+);")
+private val DEC_CHAR_REF = Regex("&#(\\d+);")
+private val UNICODE_ESCAPE = Regex("\\\\u([0-9a-fA-F]{4})")
+
 fun PsiElement.isValidExpression(): Boolean {
-    val isExpression = this is KtDotQualifiedExpression || this is PsiReferenceExpression
-    val containsPrefix = this.text.contains(R_PREFIX)
-    return isExpression && containsPrefix
+    if (this.firstChild != null) return false
+    val expr = findRStringExpression() ?: return false
+    var first: PsiElement = expr
+    while (first.firstChild != null) first = first.firstChild
+    return first === this
+}
+
+fun PsiElement.findRStringExpression(): PsiElement? {
+    var current: PsiElement? = this.parent
+    while (current != null) {
+        if ((current is KtDotQualifiedExpression || current is PsiReferenceExpression)
+            && current.text.startsWith(R_PREFIX)) {
+            return current
+        }
+        current = current.parent
+    }
+    return null
 }
 
 fun PsiElement.isValidLayoutXmlElement(): Boolean {
@@ -49,7 +67,8 @@ fun PsiElement.isValidResXmlToken(): Boolean {
 fun PsiElement.removePrefix(): String {
     when {
         this.isValidExpression() -> {
-            return this.text.removePrefix(R_PREFIX)
+            val expr = this.findRStringExpression() ?: return this.text
+            return expr.text.removePrefix(R_PREFIX)
         }
         this.isValidLayoutXmlElement() -> {
             return (this as? XmlAttributeValue)?.value?.removePrefix(XML_PREFIX) ?:
@@ -86,13 +105,13 @@ fun PsiElement.getStringTagValue(): String? {
 
 private fun decodeIconFontValue(text: String): String {
     var result = text.trim()
-    result = result.replace(Regex("&#x([0-9a-fA-F]+);")) {
+    result = result.replace(HEX_CHAR_REF) {
         try { String(Character.toChars(it.groupValues[1].toInt(16))) } catch (_: Exception) { it.value }
     }
-    result = result.replace(Regex("&#(\\d+);")) {
+    result = result.replace(DEC_CHAR_REF) {
         try { String(Character.toChars(it.groupValues[1].toInt())) } catch (_: Exception) { it.value }
     }
-    result = result.replace(Regex("\\\\u([0-9a-fA-F]{4})")) {
+    result = result.replace(UNICODE_ESCAPE) {
         try { String(Character.toChars(it.groupValues[1].toInt(16))) } catch (_: Exception) { it.value }
     }
     return result

@@ -19,6 +19,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileVisitor
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
+import java.io.File
 
 class SearchStartupActivity : StartupActivity.DumbAware {
 
@@ -26,9 +27,7 @@ class SearchStartupActivity : StartupActivity.DumbAware {
         DumbService.getInstance(project).runWhenSmart {
             val task = object : Task.Backgroundable(project, "Scanning IconFont TTF Files", false) {
                 override fun run(indicator: ProgressIndicator) {
-                    ReadAction.run<Throwable> {
-                        scanForFonts(project, indicator)
-                    }
+                    scanForFonts(project, indicator)
                 }
             }
             ProgressManager.getInstance().run(task)
@@ -39,7 +38,7 @@ class SearchStartupActivity : StartupActivity.DumbAware {
         fun scanForFonts(project: Project, indicator: ProgressIndicator) {
             indicator.text = "Searching for .ttf files..."
             val settings = IconFontSettings.getInstance(project)
-            val existingPaths = settings.state.fontInfos.associateBy { it.path }
+            val existingPaths = settings.getFontInfosSnapshot().associateBy { it.path }
 
             val newFontInfos = mutableListOf<FontInfo>()
             val discoveredPaths = mutableSetOf<String>()
@@ -47,8 +46,10 @@ class SearchStartupActivity : StartupActivity.DumbAware {
             // ── 阶段 1：通过 FilenameIndex 扫描项目源码中的 TTF ──
             indicator.text2 = "Scanning project sources..."
             val scope = GlobalSearchScope.allScope(project)
-            val allTtfFiles = FilenameIndex.getAllFilenames(project)
-                .filter { it.endsWith(".ttf", ignoreCase = true) }
+            val allTtfFiles = ReadAction.compute<List<String>, Throwable> {
+                FilenameIndex.getAllFilenames(project)
+                    .filter { it.endsWith(".ttf", ignoreCase = true) }
+            }
 
             indicator.isIndeterminate = false
             var processed = 0.0
@@ -58,11 +59,13 @@ class SearchStartupActivity : StartupActivity.DumbAware {
                 indicator.fraction = processed++ / (allTtfFiles.size + 1).toDouble() * 0.5
                 indicator.text2 = "Processing: $filename"
 
-                val virtualFiles = FilenameIndex.getVirtualFilesByName(filename, scope)
+                val virtualFiles = ReadAction.compute<Collection<VirtualFile>, Throwable> {
+                    FilenameIndex.getVirtualFilesByName(filename, scope)
+                }
                 for (file in virtualFiles) {
                     val path = file.path
-                    if (path in existingPaths || path in discoveredPaths) continue
-                    discoveredPaths.add(path)
+                    if (!discoveredPaths.add(path)) continue
+                    if (path in existingPaths) continue
 
                     val source = if (path.contains("/.gradle/caches/") || path.contains("/build/")) {
                         FontSource.AAR
@@ -81,19 +84,27 @@ class SearchStartupActivity : StartupActivity.DumbAware {
             // ── 阶段 2：通过 OrderEnumerator 扫描依赖库中的 TTF（补充 AAR） ──
             indicator.text = "Scanning library dependencies..."
             indicator.text2 = ""
-            val modules = ModuleManager.getInstance(project).modules
+            val modules = ReadAction.compute<Array<com.intellij.openapi.module.Module>, Throwable> {
+                ModuleManager.getInstance(project).modules
+            }
 
             for (module in modules) {
                 indicator.checkCanceled()
-                val libraryRoots = OrderEnumerator.orderEntries(module)
-                    .librariesOnly()
-                    .classesRoots
+                val libraryRoots = ReadAction.compute<Array<VirtualFile>, Throwable> {
+                    OrderEnumerator.orderEntries(module)
+                        .librariesOnly()
+                        .classesRoots
+                }
 
                 for (root in libraryRoots) {
                     indicator.checkCanceled()
                     // 只扫描 res/font 目录和 assets 目录（AAR 中字体的常见位置）
-                    scanDirForTtf(root, "res/font", existingPaths, discoveredPaths, newFontInfos)
-                    scanDirForTtf(root, "assets", existingPaths, discoveredPaths, newFontInfos)
+                    ReadAction.run<Throwable> {
+                        scanDirForTtf(root, "res/font", existingPaths, discoveredPaths, newFontInfos)
+                    }
+                    ReadAction.run<Throwable> {
+                        scanDirForTtf(root, "assets", existingPaths, discoveredPaths, newFontInfos)
+                    }
                 }
             }
 
@@ -101,13 +112,24 @@ class SearchStartupActivity : StartupActivity.DumbAware {
             indicator.text = "Finalizing..."
 
             // ── 清理已不存在的文件（用户手动添加的除外）──
-            val allKnownPaths = discoveredPaths + existingPaths.keys
-            settings.state.fontInfos.removeAll { fi ->
-                fi.source != FontSource.USER && fi.path !in allKnownPaths && !java.io.File(fi.path).exists()
-            }
+            val removedPaths = mutableListOf<String>()
+            settings.mutateFontInfos { fontInfos ->
+                fontInfos.removeAll { fi ->
+                    val shouldRemove = fi.source != FontSource.USER &&
+                        fi.path !in discoveredPaths &&
+                        !File(fi.path).exists()
+                    if (shouldRemove) {
+                        removedPaths.add(fi.path)
+                    }
+                    shouldRemove
+                }
 
-            if (newFontInfos.isNotEmpty()) {
-                settings.state.fontInfos.addAll(newFontInfos)
+                if (newFontInfos.isNotEmpty()) {
+                    fontInfos.addAll(newFontInfos)
+                }
+            }
+            for (removedPath in removedPaths) {
+                settings.fontCache.remove(removedPath)
             }
 
             indicator.fraction = 1.0
@@ -128,8 +150,10 @@ class SearchStartupActivity : StartupActivity.DumbAware {
                 override fun visitFile(file: VirtualFile): Boolean {
                     if (!file.isDirectory && file.extension.equals("ttf", ignoreCase = true)) {
                         val path = file.path
-                        if (path !in existingPaths && path !in discoveredPaths) {
-                            discoveredPaths.add(path)
+                        if (!discoveredPaths.add(path)) {
+                            return true
+                        }
+                        if (path !in existingPaths) {
                             newFontInfos.add(FontInfo(
                                 path = path,
                                 source = FontSource.AAR,

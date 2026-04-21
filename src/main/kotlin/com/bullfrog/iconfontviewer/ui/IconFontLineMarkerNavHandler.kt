@@ -1,12 +1,12 @@
 package com.bullfrog.iconfontviewer.ui
 
-import com.android.tools.adtui.LightCalloutPopup
 import com.bullfrog.iconfontviewer.model.IconFontPopupModel
 import com.bullfrog.iconfontviewer.util.*
 import com.intellij.codeInsight.daemon.GutterIconNavigationHandler
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.ui.popup.Balloon
+import com.intellij.openapi.ui.popup.JBPopup
+import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementFactory
@@ -36,14 +36,11 @@ class IconFontLineMarkerNavHandler(
     private val fontPath: String
 ) : GutterIconNavigationHandler<PsiElement> {
 
-    private lateinit var searchTextField: SearchTextField
-
-    private val speedSearch = SpeedSearch().apply {
-        setEnabled(true)
-    }
-
     override fun navigate(e: MouseEvent?, elt: PsiElement?) {
         val element = smartPointer.element ?: return
+        val speedSearch = SpeedSearch().apply {
+            setEnabled(true)
+        }
 
         val iconList = buildIconListForFont(matchedFont, fontPath, element)
         if (iconList.isEmpty()) return
@@ -60,38 +57,42 @@ class IconFontLineMarkerNavHandler(
             filteringModel.refilter()
         }
 
-        val popup = LightCalloutPopup(null, null, null)
-        popup.show(
-            buildPopupPanel(filteringModel, popup),
-            null,
-            MouseInfo.getPointerInfo().location,
-            Balloon.Position.below
+        var popup: JBPopup? = null
+        val (panel, searchField) = buildPopupPanel(filteringModel, { popup?.cancel() }, speedSearch)
+
+        popup = JBPopupFactory.getInstance()
+            .createComponentPopupBuilder(panel, searchField)
+            .setFocusable(true)
+            .setRequestFocus(true)
+            .createPopup()
+        popup.showInScreenCoordinates(
+            e?.component ?: return,
+            MouseInfo.getPointerInfo().location
         )
     }
 
     private fun buildPopupPanel(
         listModel: NameFilteringListModel<IconFontPopupModel>,
-        popup: LightCalloutPopup
-    ): JPanel {
-        return JPanel().apply {
+        closeAction: () -> Unit,
+        speedSearch: SpeedSearch
+    ): Pair<JPanel, SearchTextField> {
+        val searchField = SearchTextField().apply {
+            isFocusable = true
+            border = BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, JBUI.CurrentTheme.Popup.separatorColor()),
+                JBEmptyBorder(8, 8, 8, 8)
+            )
+            addDocumentListener(object : DocumentAdapter() {
+                override fun textChanged(e: DocumentEvent) {
+                    speedSearch.updatePattern(e.document.getText(0, e.document.length))
+                }
+            })
+        }
+
+        val panel = JPanel().apply {
             preferredSize = Dimension(300.jbScale(), 450.jbScale())
             layout = BorderLayout()
-            add(
-                SearchTextField().apply {
-                    searchTextField = this
-                    isFocusable = true
-                    border = BorderFactory.createCompoundBorder(
-                        BorderFactory.createMatteBorder(0, 0, 1, 0, JBUI.CurrentTheme.Popup.separatorColor()),
-                        JBEmptyBorder(8, 8, 8, 8)
-                    )
-                    addDocumentListener(object : DocumentAdapter() {
-                        override fun textChanged(e: DocumentEvent) {
-                            speedSearch.updatePattern(e.document.getText(0, e.document.length))
-                        }
-                    })
-                },
-                BorderLayout.NORTH
-            )
+            add(searchField, BorderLayout.NORTH)
             add(
                 JScrollPane().apply {
                     preferredSize = Dimension(300.jbScale(), 400.jbScale())
@@ -99,14 +100,15 @@ class IconFontLineMarkerNavHandler(
                         border = JBUI.Borders.empty(4.jbScale(), 8.jbScale())
                         model = listModel
                         cellRenderer = PopupListCellRenderer()
-                        // 用 MouseListener 替代 ListSelectionListener，避免选择变化时误触发替换
                         addMouseListener(object : MouseAdapter() {
                             override fun mouseClicked(e: MouseEvent) {
                                 val idx = locationToIndex(e.point)
                                 if (idx < 0) return
+                                val cellBounds = getCellBounds(idx, idx) ?: return
+                                if (!cellBounds.contains(e.point)) return
                                 val selected = listModel.getElementAt(idx) ?: return
                                 doReplace(selected)
-                                popup.close()
+                                closeAction()
                             }
                         })
                     }
@@ -115,17 +117,9 @@ class IconFontLineMarkerNavHandler(
                 BorderLayout.CENTER
             )
             isVisible = true
-            isFocusCycleRoot = true
-            isFocusTraversalPolicyProvider = true
-            focusTraversalPolicy = object : LayoutFocusTraversalPolicy() {
-                override fun getDefaultComponent(aContainer: Container?): Component {
-                    return searchTextField
-                }
-            }
-            addPropertyChangeListener("ancestor") {
-                searchTextField.requestFocusInWindow()
-            }
         }
+
+        return panel to searchField
     }
 
     class PopupListCellRenderer : ListCellRenderer<IconFontPopupModel> {
@@ -152,35 +146,32 @@ class IconFontLineMarkerNavHandler(
     }
 
     private fun doReplace(model: IconFontPopupModel) {
-        val element = smartPointer.element ?: return
+        val project = smartPointer.project
         ApplicationManager.getApplication().invokeLater {
             WriteCommandAction.runWriteCommandAction(
-                element.project,
+                project,
                 "Replace IconFont",
                 null,
                 {
+                    val element = smartPointer.element ?: return@runWriteCommandAction
                     when {
                         element.isValidExpression() -> {
-                            val expression = if (element is PsiReferenceExpression) {
-                                PsiElementFactory.getInstance(element.project)
-                                    .createExpressionFromText(R_PREFIX + model.key, element)
+                            val expr = element.findRStringExpression() ?: return@runWriteCommandAction
+                            val replacement = if (expr is PsiReferenceExpression) {
+                                PsiElementFactory.getInstance(project)
+                                    .createExpressionFromText(R_PREFIX + model.key, expr)
                             } else {
-                                KtPsiFactory(element.project).createExpression(R_PREFIX + model.key)
+                                KtPsiFactory(project).createExpression(R_PREFIX + model.key)
                             }
-                            element.replace(expression)
+                            expr.replace(replacement)
                         }
                         element.isValidLayoutXmlElement() -> {
                             val parent = PsiTreeUtil.getParentOfType(element, XmlAttribute::class.java)
                             parent?.setValue(XML_PREFIX + model.key)
                         }
                         element.isStringResourceTagName() -> {
-                            // strings.xml: 从 token 向上找到父 XmlTag，替换文本内容
                             val xmlTag = element.getParentStringResourceTag() ?: return@runWriteCommandAction
                             xmlTag.value.setText(model.text)
-                        }
-                        element.isValidResXmlToken() -> {
-                            val xmlTagValue = (element as? XmlTag)?.value
-                            xmlTagValue?.setText(model.text)
                         }
                     }
                 }
