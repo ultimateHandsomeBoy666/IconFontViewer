@@ -46,5 +46,5 @@ bin/
 local.properties
 .intellijPlatform
 .kotlin
-.omc
 .claude
+.omc

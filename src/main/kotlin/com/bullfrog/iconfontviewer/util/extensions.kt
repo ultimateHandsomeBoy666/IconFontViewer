@@ -11,23 +11,13 @@ private val DEC_CHAR_REF = Regex("&#(\\d+);")
 private val UNICODE_ESCAPE = Regex("\\\\u([0-9a-fA-F]{4})")
 
 fun PsiElement.isValidExpression(): Boolean {
-    if (this.firstChild != null) return false
-    val expr = findRStringExpression() ?: return false
-    var first: PsiElement = expr
-    while (first.firstChild != null) first = first.firstChild
-    return first === this
-}
-
-fun PsiElement.findRStringExpression(): PsiElement? {
-    var current: PsiElement? = this.parent
-    while (current != null) {
-        if ((current is KtDotQualifiedExpression || current is PsiReferenceExpression)
-            && current.text.startsWith(R_PREFIX)) {
-            return current
-        }
-        current = current.parent
-    }
-    return null
+    val isExpression = this is KtDotQualifiedExpression || this is PsiReferenceExpression
+    if (!isExpression) return false
+    if (!this.text.startsWith(R_PREFIX)) return false
+    val parent = this.parent
+    if ((parent is KtDotQualifiedExpression || parent is PsiReferenceExpression)
+        && parent.text.startsWith(R_PREFIX)) return false
+    return true
 }
 
 fun PsiElement.isValidLayoutXmlElement(): Boolean {
@@ -67,8 +57,7 @@ fun PsiElement.isValidResXmlToken(): Boolean {
 fun PsiElement.removePrefix(): String {
     when {
         this.isValidExpression() -> {
-            val expr = this.findRStringExpression() ?: return this.text
-            return expr.text.removePrefix(R_PREFIX)
+            return this.text.removePrefix(R_PREFIX)
         }
         this.isValidLayoutXmlElement() -> {
             return (this as? XmlAttributeValue)?.value?.removePrefix(XML_PREFIX) ?:
