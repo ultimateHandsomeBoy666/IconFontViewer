@@ -59,8 +59,12 @@ class TTFMainPanel(private val project: Project) : JPanel() {
     private val animTimer = Timer(12) {
         var needRepaint = false
         for ((path, progress) in toggleProgress.toMap()) {
-            val fi = settings.state.fontInfos.find { it.path == path } ?: continue
-            val target = if (fi.enabled) 1.0f else 0.0f
+            val enabled = settings.isFontEnabled(path)
+            if (enabled == null) {
+                toggleProgress.remove(path)
+                continue
+            }
+            val target = if (enabled) 1.0f else 0.0f
             if (progress != target) {
                 val step = 0.12f
                 val next = if (target > progress) (progress + step).coerceAtMost(1.0f) else (progress - step).coerceAtLeast(0.0f)
@@ -93,8 +97,9 @@ class TTFMainPanel(private val project: Project) : JPanel() {
 
     private fun updateSummary() {
         summaryBar.removeAll()
-        val total = settings.state.fontInfos.size
-        val enabled = settings.state.fontInfos.count { it.enabled }
+        val fontInfos = settings.getFontInfosSnapshot()
+        val total = fontInfos.size
+        val enabled = fontInfos.count { it.enabled }
         summaryBar.add(JBLabel("$total").apply { font = font.deriveFont(Font.BOLD, 13f); foreground = sumBold })
         summaryBar.add(JBLabel("fonts").apply { font = font.deriveFont(13f); foreground = sumText })
         summaryBar.add(JBLabel("  ·  ").apply { foreground = sumText })
@@ -113,14 +118,14 @@ class TTFMainPanel(private val project: Project) : JPanel() {
         fontList.toolTipText = ""
         fontList.addMouseMotionListener(object : MouseAdapter() {
             override fun mouseMoved(e: MouseEvent) {
-                val i = fontList.locationToIndex(e.point)
+                val i = indexAtPoint(e.point)
                 fontList.toolTipText = if (i >= 0 && i < listModel.size) listModel.getElementAt(i).path else null
             }
         })
 
         fontList.addMouseMotionListener(object : MouseAdapter() {
             override fun mouseMoved(e: MouseEvent) {
-                val i = fontList.locationToIndex(e.point)
+                val i = indexAtPoint(e.point)
                 val b = if (i >= 0) fontList.getCellBounds(i, i) else null
                 val d = b != null && (e.x - b.x) > b.width - pad - delSize
                 if (i != hoverIdx || d != hoverDel) { hoverIdx = i; hoverDel = d; fontList.repaint() }
@@ -129,7 +134,7 @@ class TTFMainPanel(private val project: Project) : JPanel() {
         fontList.addMouseListener(object : MouseAdapter() {
             override fun mouseExited(e: MouseEvent?) { hoverIdx = -1; hoverDel = false; fontList.repaint() }
             override fun mouseClicked(e: MouseEvent) {
-                val i = fontList.locationToIndex(e.point)
+                val i = indexAtPoint(e.point)
                 if (i < 0 || i >= listModel.size) return
                 val b = fontList.getCellBounds(i, i) ?: return
                 val rx = e.x - b.x
@@ -138,11 +143,16 @@ class TTFMainPanel(private val project: Project) : JPanel() {
 
                 if (rx > w - pad - delSize) { handleDelete(fi); return }
                 if (rx > w - pad - delSize - JBUI.scale(12) - tglW) {
-                    fi.enabled = !fi.enabled
-                    listModel.set(i, fi)
-                    updateSummary()
-                    // 启动动画
-                    if (!animTimer.isRunning) animTimer.start()
+                    val enabled = !fi.enabled
+                    if (settings.setFontEnabled(fi.path, enabled)) {
+                        fi.enabled = enabled
+                        listModel.set(i, fi)
+                        updateSummary()
+                        // 启动动画
+                        if (!animTimer.isRunning) animTimer.start()
+                    } else {
+                        refreshList()
+                    }
                 }
             }
         })
@@ -164,11 +174,15 @@ class TTFMainPanel(private val project: Project) : JPanel() {
     // ── Data ──
     private fun refreshList() {
         listModel.clear()
-        settings.state.fontInfos.forEach {
+        val fontInfos = settings.getFontInfosSnapshot()
+        val validPaths = HashSet<String>(fontInfos.size)
+        fontInfos.forEach {
             listModel.addElement(it)
+            validPaths.add(it.path)
             // 初始化动画进度（无动画，直接到位）
             toggleProgress.putIfAbsent(it.path, if (it.enabled) 1.0f else 0.0f)
         }
+        toggleProgress.keys.retainAll(validPaths)
         if (listModel.isEmpty) fontList.emptyText.text = getString("icv.empty.state")
         updateSummary()
     }
@@ -176,7 +190,8 @@ class TTFMainPanel(private val project: Project) : JPanel() {
     private fun handleDelete(fi: FontInfo) {
         val msg = getString("icv.btn.delete.confirm.message").replace("{0}", fi.fileName)
         if (Messages.showYesNoDialog(msg, getString("icv.btn.delete.confirm.title"), Messages.getQuestionIcon()) == Messages.YES) {
-            settings.state.fontInfos.remove(fi)
+            settings.removeFontByPath(fi.path)
+            toggleProgress.remove(fi.path)
             refreshList()
         }
     }
@@ -186,7 +201,9 @@ class TTFMainPanel(private val project: Project) : JPanel() {
             .withTitle(getString("icv.chooser.title"))
             .withFileFilter { it.extension?.equals("ttf", true) == true }
         FileChooser.chooseFiles(d, project, null) { files ->
-            files.forEach { f -> if (settings.state.fontInfos.none { it.path == f.path }) settings.state.fontInfos.add(FontInfo(f.path, FontSource.USER, true)) }
+            files.forEach { f ->
+                settings.addFontIfAbsent(FontInfo(f.path, FontSource.USER, true))
+            }
             refreshList()
         }
     }
@@ -194,12 +211,37 @@ class TTFMainPanel(private val project: Project) : JPanel() {
     private fun rescanProject() {
         ProgressManager.getInstance().run(object : Task.Backgroundable(project, "Rescanning…", true) {
             override fun run(ind: com.intellij.openapi.progress.ProgressIndicator) {
-                com.intellij.openapi.application.ReadAction.run<Throwable> {
-                    SearchStartupActivity.scanForFonts(project, ind)
-                }
+                SearchStartupActivity.scanForFonts(project, ind)
             }
             override fun onSuccess() = SwingUtilities.invokeLater { refreshList() }
         })
+    }
+
+    override fun removeNotify() {
+        super.removeNotify()
+        animTimer.stop()
+    }
+
+    private fun indexAtPoint(point: Point): Int {
+        val idx = fontList.locationToIndex(point)
+        if (idx < 0) return -1
+        val bounds = fontList.getCellBounds(idx, idx) ?: return -1
+        return if (bounds.contains(point)) idx else -1
+    }
+
+    private fun truncatePath(path: String, fm: FontMetrics, max: Int): String {
+        if (max <= 0) return ""
+        if (fm.stringWidth(path) <= max) return path
+        val parts = path.split("/")
+        if (parts.size > 3) {
+            val short = ".../" + parts.takeLast(3).joinToString("/")
+            if (fm.stringWidth(short) <= max) return short
+        }
+        val ellipsisWidth = fm.stringWidth("...")
+        if (max <= ellipsisWidth) return "..."
+        var end = path.length
+        while (end > 0 && fm.stringWidth(path.substring(0, end)) + ellipsisWidth > max) end--
+        return path.substring(0, end) + "..."
     }
 
     // ── Custom Paint Renderer ──
@@ -255,7 +297,7 @@ class TTFMainPanel(private val project: Project) : JPanel() {
                 g2.color = pathC
                 val pfm = g2.fontMetrics
                 val maxPW = w - textX - JBUI.scale(120)
-                g2.drawString(truncPath(v.path, pfm, maxPW), textX, cy + JBUI.scale(14))
+                g2.drawString(truncatePath(v.path, pfm, maxPW), textX, cy + JBUI.scale(14))
 
                 // ── 开关（带动画）──
                 val tx = w - pad - delSize - JBUI.scale(12) - tglW
@@ -313,19 +355,5 @@ class TTFMainPanel(private val project: Project) : JPanel() {
             g2.fillOval(thumbX, y + tp, ts, ts)
         }
 
-        private fun truncPath(path: String, fm: FontMetrics, max: Int): String {
-            if (max <= 0) return ""
-            if (fm.stringWidth(path) <= max) return path
-            val parts = path.split("/")
-            if (parts.size > 3) {
-                val short = ".../" + parts.takeLast(3).joinToString("/")
-                if (fm.stringWidth(short) <= max) return short
-            }
-            val ew = fm.stringWidth("...")
-            if (max <= ew) return "..."
-            var e = path.length
-            while (e > 0 && fm.stringWidth(path.substring(0, e)) + ew > max) e--
-            return path.substring(0, e) + "..."
-        }
     }
 }

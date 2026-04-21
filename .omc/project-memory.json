@@ -67,14 +67,26 @@
   "hotPaths": [
     {
       "path": "src/main/kotlin/com/bullfrog/iconfontviewer/ui/TTFMainPanel.kt",
-      "accessCount": 18,
-      "lastAccessed": 1776690687051,
+      "accessCount": 21,
+      "lastAccessed": 1776770522324,
       "type": "file"
     },
     {
       "path": "src/main/kotlin/com/bullfrog/iconfontviewer/util/Util.kt",
-      "accessCount": 14,
-      "lastAccessed": 1776690686963,
+      "accessCount": 20,
+      "lastAccessed": 1776770426718,
+      "type": "file"
+    },
+    {
+      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/ui/IconFontLineMarkerNavHandler.kt",
+      "accessCount": 17,
+      "lastAccessed": 1776770574713,
+      "type": "file"
+    },
+    {
+      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/util/extensions.kt",
+      "accessCount": 11,
+      "lastAccessed": 1776770443328,
       "type": "file"
     },
     {
@@ -84,27 +96,15 @@
       "type": "file"
     },
     {
-      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/ui/IconFontLineMarkerNavHandler.kt",
-      "accessCount": 9,
-      "lastAccessed": 1776690687217,
-      "type": "file"
-    },
-    {
       "path": "src/main/kotlin/com/bullfrog/iconfontviewer/ui/IconFontLineMarkerProvider.kt",
-      "accessCount": 8,
-      "lastAccessed": 1776690686909,
-      "type": "file"
-    },
-    {
-      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/util/extensions.kt",
-      "accessCount": 8,
-      "lastAccessed": 1776690687107,
+      "accessCount": 9,
+      "lastAccessed": 1776770254172,
       "type": "file"
     },
     {
       "path": "src/main/kotlin/com/bullfrog/iconfontviewer/IconFontSettings.kt",
-      "accessCount": 5,
-      "lastAccessed": 1776690687161,
+      "accessCount": 8,
+      "lastAccessed": 1776770389387,
       "type": "file"
     },
     {

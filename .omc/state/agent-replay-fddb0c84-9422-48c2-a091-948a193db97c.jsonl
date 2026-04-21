@@ -7,3 +7,5 @@
 {"t":0,"agent":"a65d958","agent_type":"superpowers:code-reviewer","event":"agent_start","parent_mode":"none"}
 {"t":0,"agent":"a65d958","agent_type":"superpowers:code-reviewer","event":"agent_stop","success":true,"duration_ms":149562}
 {"t":0,"agent":"a5c61de","agent_type":"unknown","event":"agent_stop","success":true}
+{"t":0,"agent":"a2d2fca","agent_type":"unknown","event":"agent_stop","success":true}
+{"t":0,"agent":"a6499c4","agent_type":"unknown","event":"agent_stop","success":true}
