@@ -5,6 +5,7 @@ import com.bullfrog.iconfontviewer.model.FontInfo
 import com.bullfrog.iconfontviewer.model.FontSource
 import com.bullfrog.iconfontviewer.start.SearchStartupActivity
 import com.bullfrog.iconfontviewer.util.getString
+import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
 import com.intellij.openapi.progress.ProgressManager
@@ -148,7 +149,7 @@ class TTFMainPanel(private val project: Project) : JPanel() {
                         fi.enabled = enabled
                         listModel.set(i, fi)
                         updateSummary()
-                        // 启动动画
+                        notifyFontsChanged()
                         if (!animTimer.isRunning) animTimer.start()
                     } else {
                         refreshList()
@@ -193,6 +194,7 @@ class TTFMainPanel(private val project: Project) : JPanel() {
             settings.removeFontByPath(fi.path)
             toggleProgress.remove(fi.path)
             refreshList()
+            notifyFontsChanged()
         }
     }
 
@@ -205,6 +207,7 @@ class TTFMainPanel(private val project: Project) : JPanel() {
                 settings.addFontIfAbsent(FontInfo(f.path, FontSource.USER, true))
             }
             refreshList()
+            notifyFontsChanged()
         }
     }
 
@@ -213,8 +216,13 @@ class TTFMainPanel(private val project: Project) : JPanel() {
             override fun run(ind: com.intellij.openapi.progress.ProgressIndicator) {
                 SearchStartupActivity.scanForFonts(project, ind)
             }
-            override fun onSuccess() = SwingUtilities.invokeLater { refreshList() }
+            override fun onSuccess() = SwingUtilities.invokeLater { refreshList(); notifyFontsChanged() }
         })
+    }
+
+    private fun notifyFontsChanged() {
+        settings.iconListCache.clear()
+        DaemonCodeAnalyzer.getInstance(project).restart()
     }
 
     override fun removeNotify() {

@@ -67,8 +67,8 @@
   "hotPaths": [
     {
       "path": "src/main/kotlin/com/bullfrog/iconfontviewer/ui/TTFMainPanel.kt",
-      "accessCount": 21,
-      "lastAccessed": 1776770522324,
+      "accessCount": 28,
+      "lastAccessed": 1776775650734,
       "type": "file"
     },
     {
@@ -91,8 +91,8 @@
     },
     {
       "path": "src/main/kotlin/com/bullfrog/iconfontviewer/start/SearchStartupActivity.kt",
-      "accessCount": 9,
-      "lastAccessed": 1776690687007,
+      "accessCount": 11,
+      "lastAccessed": 1776776472324,
       "type": "file"
     },
     {
