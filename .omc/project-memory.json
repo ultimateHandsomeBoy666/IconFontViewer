@@ -67,93 +67,111 @@
   "hotPaths": [
     {
       "path": "src/main/kotlin/com/bullfrog/iconfontviewer/ui/TTFMainPanel.kt",
-      "accessCount": 17,
-      "lastAccessed": 1776505537963,
+      "accessCount": 18,
+      "lastAccessed": 1776690687051,
       "type": "file"
     },
     {
       "path": "src/main/kotlin/com/bullfrog/iconfontviewer/util/Util.kt",
-      "accessCount": 13,
-      "lastAccessed": 1776672168757,
-      "type": "file"
-    },
-    {
-      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/ui/IconFontLineMarkerNavHandler.kt",
-      "accessCount": 8,
-      "lastAccessed": 1776673168976,
+      "accessCount": 14,
+      "lastAccessed": 1776690686963,
       "type": "file"
     },
     {
       "path": "src/main/kotlin/com/bullfrog/iconfontviewer/start/SearchStartupActivity.kt",
-      "accessCount": 7,
-      "lastAccessed": 1776493737914,
+      "accessCount": 9,
+      "lastAccessed": 1776690687007,
+      "type": "file"
+    },
+    {
+      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/ui/IconFontLineMarkerNavHandler.kt",
+      "accessCount": 9,
+      "lastAccessed": 1776690687217,
       "type": "file"
     },
     {
       "path": "src/main/kotlin/com/bullfrog/iconfontviewer/ui/IconFontLineMarkerProvider.kt",
-      "accessCount": 7,
-      "lastAccessed": 1776673155549,
+      "accessCount": 8,
+      "lastAccessed": 1776690686909,
       "type": "file"
     },
     {
       "path": "src/main/kotlin/com/bullfrog/iconfontviewer/util/extensions.kt",
-      "accessCount": 7,
-      "lastAccessed": 1776678212330,
-      "type": "file"
-    },
-    {
-      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/util/Constants.kt",
-      "accessCount": 3,
-      "lastAccessed": 1776413421329,
+      "accessCount": 8,
+      "lastAccessed": 1776690687107,
       "type": "file"
     },
     {
       "path": "src/main/kotlin/com/bullfrog/iconfontviewer/IconFontSettings.kt",
-      "accessCount": 3,
-      "lastAccessed": 1776413421622,
+      "accessCount": 5,
+      "lastAccessed": 1776690687161,
       "type": "file"
     },
     {
-      "path": "src/main/resources/strings.properties",
-      "accessCount": 3,
-      "lastAccessed": 1776413514469,
-      "type": "file"
-    },
-    {
-      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/model/IconFontPopupModel.kt",
-      "accessCount": 2,
-      "lastAccessed": 1776413375986,
-      "type": "file"
-    },
-    {
-      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/model/IconFontTtfFileModel.kt",
-      "accessCount": 2,
-      "lastAccessed": 1776413376039,
-      "type": "file"
-    },
-    {
-      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/ui/TTFInputDialog.kt",
-      "accessCount": 2,
-      "lastAccessed": 1776413577834,
+      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/util/Constants.kt",
+      "accessCount": 5,
+      "lastAccessed": 1776690687270,
       "type": "file"
     },
     {
       "path": "src/main/kotlin/com/bullfrog/iconfontviewer/MainAction.kt",
-      "accessCount": 2,
-      "lastAccessed": 1776413583531,
+      "accessCount": 4,
+      "lastAccessed": 1776690699779,
+      "type": "file"
+    },
+    {
+      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/model/IconFontTtfFileModel.kt",
+      "accessCount": 4,
+      "lastAccessed": 1776690699861,
+      "type": "file"
+    },
+    {
+      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/ui/TTFInputDialog.kt",
+      "accessCount": 4,
+      "lastAccessed": 1776690699927,
+      "type": "file"
+    },
+    {
+      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/model/IconFontPopupModel.kt",
+      "accessCount": 4,
+      "lastAccessed": 1776690699992,
       "type": "file"
     },
     {
       "path": "src/main/kotlin/com/bullfrog/iconfontviewer/ui/SwitchButton.kt",
-      "accessCount": 2,
-      "lastAccessed": 1776421263856,
+      "accessCount": 4,
+      "lastAccessed": 1776690700042,
+      "type": "file"
+    },
+    {
+      "path": "src/main/resources/strings.properties",
+      "accessCount": 4,
+      "lastAccessed": 1776690705107,
+      "type": "file"
+    },
+    {
+      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/ui/IconFromIconFontCharacter.kt",
+      "accessCount": 3,
+      "lastAccessed": 1776690699825,
+      "type": "file"
+    },
+    {
+      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/ui/ScaledIcon.kt",
+      "accessCount": 3,
+      "lastAccessed": 1776690699893,
       "type": "file"
     },
     {
       "path": "src/main/resources/META-INF/plugin.xml",
-      "accessCount": 2,
-      "lastAccessed": 1776505369324,
+      "accessCount": 3,
+      "lastAccessed": 1776690705063,
       "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 2,
+      "lastAccessed": 1776690712165,
+      "type": "directory"
     },
     {
       "path": "gradle.properties",
@@ -174,18 +192,6 @@
       "type": "file"
     },
     {
-      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/ui/ScaledIcon.kt",
-      "accessCount": 1,
-      "lastAccessed": 1776411012183,
-      "type": "file"
-    },
-    {
-      "path": "src/main/kotlin/com/bullfrog/iconfontviewer/ui/IconFromIconFontCharacter.kt",
-      "accessCount": 1,
-      "lastAccessed": 1776411012400,
-      "type": "file"
-    },
-    {
       "path": "src/main/resources/META-INF/pluginIcon.svg",
       "accessCount": 1,
       "lastAccessed": 1776411014121,
@@ -201,6 +207,12 @@
       "path": "design-mockup.html",
       "accessCount": 1,
       "lastAccessed": 1776421561208,
+      "type": "file"
+    },
+    {
+      "path": "REVIEW.md",
+      "accessCount": 1,
+      "lastAccessed": 1776680846182,
       "type": "file"
     }
   ],
