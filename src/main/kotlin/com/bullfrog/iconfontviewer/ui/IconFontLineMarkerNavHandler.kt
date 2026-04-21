@@ -156,14 +156,13 @@ class IconFontLineMarkerNavHandler(
                     val element = smartPointer.element ?: return@runWriteCommandAction
                     when {
                         element.isValidExpression() -> {
-                            val expr = element.findRStringExpression() ?: return@runWriteCommandAction
-                            val replacement = if (expr is PsiReferenceExpression) {
+                            val replacement = if (element is PsiReferenceExpression) {
                                 PsiElementFactory.getInstance(project)
-                                    .createExpressionFromText(R_PREFIX + model.key, expr)
+                                    .createExpressionFromText(R_PREFIX + model.key, element)
                             } else {
                                 KtPsiFactory(project).createExpression(R_PREFIX + model.key)
                             }
-                            expr.replace(replacement)
+                            element.replace(replacement)
                         }
                         element.isValidLayoutXmlElement() -> {
                             val parent = PsiTreeUtil.getParentOfType(element, XmlAttribute::class.java)
