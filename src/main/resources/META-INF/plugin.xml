@@ -14,16 +14,41 @@
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
-    A tool to view icons in iconfont ttf file in the Android Studio gutter.</br>
-    Only support TrueType ttf file.
-    Supports Android Studio 2024.2 or newer version.
+    <h2>IconFont Viewer for Android Studio</h2>
+    <p>Preview iconfont glyphs directly in the editor gutter when referencing string resources that map to icon font characters.</p>
+
+    <h3>Features</h3>
+    <ul>
+      <li><b>Gutter Preview</b> — See icon glyphs next to <code>R.string.xxx</code> references in Kotlin/Java, <code>@string/xxx</code> in XML layouts, and <code>&lt;string&gt;</code> definitions in strings.xml</li>
+      <li><b>Click to Replace</b> — Click a gutter icon to browse all available icons from the matched font and replace the current reference</li>
+      <li><b>Smart TTF Detection</b> — Automatically scans project sources and AAR dependencies for icon font TTF files at startup</li>
+      <li><b>Font Management Panel</b> — Enable/disable fonts, add custom TTF files, rescan project via Tools → IconFontViewer</li>
+      <li><b>Unicode Support</b> — Handles <code>&amp;#xE88A;</code>, <code>&amp;#59530;</code>, <code>\uE88A</code>, and raw Unicode characters</li>
+    </ul>
+
+    <h3>Supported Formats</h3>
+    <ul>
+      <li>TrueType (.ttf) font files only</li>
+      <li>Supports Android Studio 2024.1 (Koala) and newer</li>
+    </ul>
   ]]></description>
 
-    <!-- Product and plugin compatibility requirements.
-         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
+    <change-notes><![CDATA[
+    <h3>1.0.0</h3>
+    <ul>
+      <li>Initial release</li>
+      <li>Gutter icon preview for R.string, @string/, and strings.xml definitions</li>
+      <li>Smart TTF scanning for project and AAR dependencies</li>
+      <li>Font management panel with enable/disable toggles and animated UI</li>
+      <li>Click-to-replace icon browser popup</li>
+      <li>Unicode character reference decoding (hex, decimal, Java escapes)</li>
+    </ul>
+  ]]></change-notes>
+
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.java</depends>
     <depends>org.jetbrains.android</depends>
+    <depends>org.jetbrains.kotlin</depends>
 
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
