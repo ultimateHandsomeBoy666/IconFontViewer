@@ -9,6 +9,17 @@ Android Studio 插件 — 在编辑器 gutter 中预览 iconfont 图标。
 - **智能扫描** — 启动时自动扫描项目和 AAR 依赖中的 TTF 字体文件
 - **字体管理** — 通过 Tools → IconFontViewer 管理字体的启用/禁用、手动添加和删除
 
+## 截图
+
+### Gutter 图标预览
+![Gutter Preview](pics/iconfont-preview.png)
+
+### 图标搜索与替换
+![Icon Popup](pics/iconfont-popup.png)
+
+### 字体管理面板
+![Font Panel](pics/iconfont-panel.png)
+
 ## 安装
 
 **方式一：Marketplace（推荐）**
@@ -60,6 +71,10 @@ flowchart LR
     J --> K["选择 → 替换引用"]
 ```
 
+## 测试项目
+
+[IconFontDemo](https://github.com/ultimateHandsomeBoy666/IconFontDemo)
+
 ## License
 
-MIT
+Apache 2.0
