@@ -1,5 +1,7 @@
 # IconFontViewer
 
+<img src="src/main/resources/META-INF/pluginIcon.svg" width="36" height="36" align="top"/> 
+
 Android Studio 插件 — 在编辑器 gutter 中预览 iconfont 图标。
 
 ## 功能
