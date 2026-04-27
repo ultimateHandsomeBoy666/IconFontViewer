@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.bullfrog"
-version = "1.0.0"
+version = "1.0.1"
 
 val androidStudioPath: String by project
 
