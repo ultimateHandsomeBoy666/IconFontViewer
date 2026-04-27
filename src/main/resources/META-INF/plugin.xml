@@ -59,6 +59,10 @@
         <postStartupActivity implementation="com.bullfrog.iconfontviewer.start.SearchStartupActivity"/>
     </extensions>
 
+    <extensions defaultExtensionNs="org.jetbrains.kotlin">
+        <supportsKotlinPluginMode supportsK1="true" supportsK2="true"/>
+    </extensions>
+
     <actions>
         <group id="IconFontViewer Group"
                text="IconFontViewer"
