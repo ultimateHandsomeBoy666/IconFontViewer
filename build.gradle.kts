@@ -42,6 +42,12 @@ intellijPlatform {
     publishing {
         token = providers.environmentVariable("PUBLISH_TOKEN")
     }
+
+    pluginVerification {
+        ides {
+            local(androidStudioPath)
+        }
+    }
 }
 
 tasks {
@@ -53,6 +59,11 @@ tasks {
         compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
     named<org.jetbrains.intellij.platform.gradle.tasks.RunIdeTask>("runIde") {
+        jvmArgumentProviders.add(CommandLineArgumentProvider {
+            listOf("-Xbootclasspath/a:$androidStudioPath/lib/nio-fs.jar")
+        })
+    }
+    named<org.jetbrains.intellij.platform.gradle.tasks.BuildSearchableOptionsTask>("buildSearchableOptions") {
         jvmArgumentProviders.add(CommandLineArgumentProvider {
             listOf("-Xbootclasspath/a:$androidStudioPath/lib/nio-fs.jar")
         })

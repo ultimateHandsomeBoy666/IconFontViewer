@@ -222,7 +222,7 @@ class TTFMainPanel(private val project: Project) : JPanel() {
 
     private fun notifyFontsChanged() {
         settings.iconListCache.clear()
-        DaemonCodeAnalyzer.getInstance(project).restart()
+        DaemonCodeAnalyzer.getInstance(project).restart("IconFontViewer fonts changed")
     }
 
     override fun removeNotify() {
