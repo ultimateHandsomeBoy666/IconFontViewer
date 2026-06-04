@@ -14,38 +14,45 @@
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
-    <h2>IconFont Viewer for Android Studio</h2>
-    <p>Preview iconfont glyphs directly in the editor gutter when referencing string resources that map to icon font characters.</p>
+    <h2>IconFontViewer for Android Studio</h2>
+    <p>Preview iconfont glyphs directly in the editor gutter for Android string resources.</p>
+    <p>在 Android 项目中使用 iconfont 字体时，IconFontViewer 可以直接在编辑器左侧 gutter 区域预览图标字符，快速识别、查找和替换图标资源。</p>
 
-    <h3>Features</h3>
+    <h3>主要功能</h3>
     <ul>
-      <li><b>Gutter Preview</b> — See icon glyphs next to <code>R.string.xxx</code> references in Kotlin/Java, <code>@string/xxx</code> in XML layouts, and <code>&lt;string&gt;</code> definitions in strings.xml</li>
-      <li><b>Click to Replace</b> — Click a gutter icon to browse all available icons from the matched font and replace the current reference</li>
-      <li><b>Smart TTF Detection</b> — Automatically scans project sources and AAR dependencies for icon font TTF files at startup</li>
-      <li><b>Font Management Panel</b> — Enable/disable fonts, add custom TTF files, rescan project via Tools → IconFontViewer</li>
-      <li><b>Unicode Support</b> — Handles <code>&amp;#xE88A;</code>, <code>&amp;#59530;</code>, <code>\uE88A</code>, and raw Unicode characters</li>
+      <li><b>代码旁实时预览</b>：在 Kotlin/Java 中识别 <code>R.string.xxx</code>，在 XML 布局中识别 <code>@string/xxx</code>，也支持直接预览 <code>strings.xml</code> 中的字符串定义。</li>
+      <li><b>点击替换图标</b>：点击 gutter 图标后，可浏览当前字体中的全部图标，并将当前位置的引用替换为目标图标。</li>
+      <li><b>自动扫描 TTF</b>：启动项目后自动扫描源码和 AAR 依赖中的 iconfont TTF 文件。</li>
+      <li><b>字体管理面板</b>：通过 Tools → IconFontViewer 打开管理面板，可启用、禁用、添加自定义 TTF 文件，也可以重新扫描项目。</li>
+      <li><b>多种 Unicode 写法</b>：支持 <code>&amp;#xE88A;</code>、<code>&amp;#59530;</code>、<code>\uE88A</code> 以及原始 Unicode 字符。</li>
     </ul>
 
-    <h3>Supported Formats</h3>
+    <h3>支持范围</h3>
     <ul>
-      <li>TrueType (.ttf) font files only</li>
-      <li>Supports Android Studio 2024.1 (Koala) and newer</li>
+      <li>仅支持 TrueType 字体文件（.ttf）。</li>
+      <li>支持 Android Studio 2024.1（Koala）及更新版本。</li>
     </ul>
   ]]></description>
 
     <change-notes><![CDATA[
+    <h3>1.1.0</h3>
+    <ul>
+      <li>修复 Android Studio 插件兼容性声明，避免普通 IntelliJ IDEA 版本参与验证时报缺少 Android 插件依赖。</li>
+      <li>替换已废弃的代码分析器刷新 API，提升对新版 Android Studio 的兼容性。</li>
+      <li>将插件描述和更新说明改为中文，方便中文用户了解插件功能。</li>
+    </ul>
     <h3>1.0.1</h3>
     <ul>
-      <li>Updated plugin icon</li>
+      <li>更新插件图标。</li>
     </ul>
     <h3>1.0.0</h3>
     <ul>
-      <li>Initial release</li>
-      <li>Gutter icon preview for R.string, @string/, and strings.xml definitions</li>
-      <li>Smart TTF scanning for project and AAR dependencies</li>
-      <li>Font management panel with enable/disable toggles and animated UI</li>
-      <li>Click-to-replace icon browser popup</li>
-      <li>Unicode character reference decoding (hex, decimal, Java escapes)</li>
+      <li>首次发布。</li>
+      <li>支持在 gutter 区域预览 <code>R.string</code>、<code>@string/</code> 和 <code>strings.xml</code> 中定义的 iconfont 图标。</li>
+      <li>支持自动扫描项目源码和 AAR 依赖中的 TTF 字体文件。</li>
+      <li>提供字体管理面板，可启用、禁用字体并查看扫描结果。</li>
+      <li>支持点击 gutter 图标打开图标选择弹窗，并快速替换当前引用。</li>
+      <li>支持解析十六进制、十进制、Java escape 和原始 Unicode 字符。</li>
     </ul>
   ]]></change-notes>
 
