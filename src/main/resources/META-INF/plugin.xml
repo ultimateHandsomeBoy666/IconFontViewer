@@ -35,6 +35,10 @@
   ]]></description>
 
     <change-notes><![CDATA[
+    <h3>1.1.1</h3>
+    <ul>
+      <li>修复 1.1.0 在 Android Studio 2025.2 及更早版本中的兼容性问题，避免直接调用新版 <code>DaemonCodeAnalyzer.restart(Object)</code> API。</li>
+    </ul>
     <h3>1.1.0</h3>
     <ul>
       <li>修复 Android Studio 插件兼容性声明，避免普通 IntelliJ IDEA 版本参与验证时报缺少 Android 插件依赖。</li>
