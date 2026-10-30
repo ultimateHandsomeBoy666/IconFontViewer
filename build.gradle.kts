@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.bullfrog"
-version = "1.1.2"
+version = "1.2.0"
 
 val androidStudioPath: String by project
 val fontE2E = providers.gradleProperty("fontE2E").isPresent

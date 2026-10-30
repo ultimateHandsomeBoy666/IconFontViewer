@@ -52,7 +52,7 @@
   ]]></description>
 
     <change-notes><![CDATA[
-    <h3>1.1.2</h3>
+    <h3>1.2.0</h3>
     <h4>English</h4>
     <ul>
       <li>Fix missing iconfont previews from library dependencies. Recursively scan all extracted dependency directories and original AAR/JAR files, including <code>classes.jar</code>, additional JARs and nested archives, without restricting font directory names.</li>
