@@ -9,7 +9,6 @@ import com.bullfrog.iconfontviewer.model.FontSource
 import com.bullfrog.iconfontviewer.util.FontFileAccess
 import com.bullfrog.iconfontviewer.util.ICONFONT_KEYWORDS
 import com.intellij.openapi.application.ReadAction
-import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
@@ -18,14 +17,12 @@ import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.OrderEnumerator
 import com.intellij.openapi.startup.StartupActivity
-import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 import org.jetbrains.android.facet.AndroidFacet
 import java.io.File
-import java.io.IOException
 
 class SearchStartupActivity : StartupActivity.DumbAware {
 
@@ -41,8 +38,6 @@ class SearchStartupActivity : StartupActivity.DumbAware {
     }
 
     companion object {
-        private val logger = Logger.getInstance(SearchStartupActivity::class.java)
-
         fun scanForFonts(project: Project, indicator: ProgressIndicator) {
             indicator.text = "Searching for .ttf files..."
             val settings = IconFontSettings.getInstance(project)
@@ -117,10 +112,9 @@ class SearchStartupActivity : StartupActivity.DumbAware {
                 for (path in libraryRootPaths) {
                     indicator.checkCanceled()
                     if (path in visitedLibraryPaths) continue
-                    scanDependencyRoot(
-                        File(path), visitedLibraryPaths, existingPaths,
-                        discoveredPaths, newFontInfos, indicator
-                    )
+                    FontFileAccess.scan(File(path), indicator, visitedLibraryPaths) { fontPath ->
+                        recordFont(fontPath, FontSource.AAR, existingPaths, discoveredPaths, newFontInfos)
+                    }
                 }
             }
 
@@ -143,49 +137,11 @@ class SearchStartupActivity : StartupActivity.DumbAware {
                     fontInfos.addAll(newFontInfos)
                 }
             }
-            for (removedPath in removedPaths) {
-                settings.fontCache.remove(removedPath)
-            }
+            // A rescan must also pick up a font replaced at the same filesystem/archive path.
+            settings.fontCache.clear()
+            settings.iconListCache.clear()
 
             indicator.fraction = 1.0
-        }
-
-        /**
-         * 直接扫描文件系统，不依赖 IDE 索引或 VFS 缓存；目录和归档 I/O 均在读锁外执行。
-         */
-        private fun scanDependencyRoot(
-            root: File,
-            visitedPaths: MutableSet<String>,
-            existingPaths: Map<String, FontInfo>,
-            discoveredPaths: MutableSet<String>,
-            newFontInfos: MutableList<FontInfo>,
-            indicator: ProgressIndicator
-        ) {
-            val files = root.walkTopDown()
-                .onEnter { directory ->
-                    indicator.checkCanceled()
-                    try {
-                        // 共享依赖和符号链接只遍历一次，避免重复扫描及目录循环。
-                        visitedPaths.add(FileUtil.toSystemIndependentName(directory.canonicalPath))
-                    } catch (e: IOException) {
-                        logger.warn("Cannot resolve font directory: $directory", e)
-                        false
-                    }
-                }
-                .onFail { file, error -> logger.warn("Cannot scan font directory: $file", error) }
-            for (file in files) {
-                indicator.checkCanceled()
-                if (!file.isFile) continue
-                val path = FileUtil.toSystemIndependentName(file.absolutePath)
-                if (!visitedPaths.add(path)) continue
-                when {
-                    file.extension.equals("ttf", ignoreCase = true) ->
-                        recordFont(path, FontSource.AAR, existingPaths, discoveredPaths, newFontInfos)
-                    FontFileAccess.isArchive(file.name) -> FontFileAccess.scanArchive(path, indicator) { fontPath ->
-                        recordFont(fontPath, FontSource.AAR, existingPaths, discoveredPaths, newFontInfos)
-                    }
-                }
-            }
         }
 
         private fun recordFont(

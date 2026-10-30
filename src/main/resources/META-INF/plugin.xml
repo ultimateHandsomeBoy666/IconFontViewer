@@ -79,6 +79,7 @@
         <supportsKotlinPluginMode supportsK1="true" supportsK2="true"/>
     </extensions>
 
+    <!-- ICONFONT_E2E_EXTENSIONS -->
     <actions>
         <group id="IconFontViewer Group"
                text="IconFontViewer"

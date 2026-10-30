@@ -2,6 +2,7 @@ package com.bullfrog.iconfontviewer.util
 
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProgressIndicator
+import com.intellij.openapi.util.io.FileUtil
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FilterInputStream
@@ -17,6 +18,31 @@ internal object FontFileAccess {
 
     fun isArchive(name: String): Boolean =
         name.endsWith(".jar", ignoreCase = true) || name.endsWith(".aar", ignoreCase = true)
+
+    /** Traverse real dependency directories, including unindexed files and symlinks. */
+    fun scan(root: File, indicator: ProgressIndicator, visitedPaths: MutableSet<String>, onFont: (String) -> Unit) {
+        val files = root.walkTopDown()
+            .onEnter { directory ->
+                indicator.checkCanceled()
+                try {
+                    visitedPaths.add(FileUtil.toSystemIndependentName(directory.canonicalPath))
+                } catch (e: IOException) {
+                    logger.warn("Cannot resolve font directory: $directory", e)
+                    false
+                }
+            }
+            .onFail { file, error -> logger.warn("Cannot scan font directory: $file", error) }
+        for (file in files) {
+            indicator.checkCanceled()
+            if (!file.isFile) continue
+            val path = FileUtil.toSystemIndependentName(file.absolutePath)
+            if (!visitedPaths.add(path)) continue
+            when {
+                file.extension.equals("ttf", ignoreCase = true) -> onFont(path)
+                isArchive(file.name) -> scanArchive(path, indicator, onFont)
+            }
+        }
+    }
 
     fun scanArchive(path: String, indicator: ProgressIndicator, onFont: (String) -> Unit) {
         try {
