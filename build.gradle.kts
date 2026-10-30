@@ -103,6 +103,13 @@ tasks {
             val report = file(providers.gradleProperty("fontE2EReport").get()).absolutePath
             val exitAfterTests = !providers.gradleProperty("fontE2EKeepOpen").isPresent
             args(fixtureProject)
+            providers.gradleProperty("fontE2EGradleHome").orNull?.let { home ->
+                val isolatedHome = file(home).absolutePath
+                environment("GRADLE_USER_HOME", isolatedHome)
+                systemProperty("gradle.user.home", isolatedHome)
+                systemProperty("iconfontviewer.e2e.gradleHome", isolatedHome)
+                systemProperty("iconfontviewer.e2e.repositoryRoot", file(providers.gradleProperty("fontE2ERepositoryRoot").get()).absolutePath)
+            }
             jvmArgumentProviders.add(CommandLineArgumentProvider {
                 listOf("-Diconfontviewer.e2e.project=$fixtureProject", "-Diconfontviewer.e2e.report=$report",
                     "-Didea.trust.all.projects=true", "-Diconfontviewer.e2e.exit=$exitAfterTests")

@@ -30,8 +30,10 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.xml.XmlAttributeValue
 import org.jetbrains.android.facet.AndroidFacet
+import org.jetbrains.plugins.gradle.settings.GradleSettings
 import java.awt.image.BufferedImage
 import java.io.File
+import java.security.MessageDigest
 
 /** Compiled and registered ONLY with -PfontE2E; never part of a normal plugin build. */
 class LibraryFontE2EActivity : StartupActivity.DumbAware {
@@ -113,6 +115,24 @@ class LibraryFontE2EActivity : StartupActivity.DumbAware {
         val manifest = JsonParser.parseString(File(root, "fixtures/library-font-cases.json").readText()).asJsonObject
         val cases = manifest.getAsJsonArray("cases").map { it.asJsonObject }
         val settings = IconFontSettings.getInstance(project)
+        val remoteHome = System.getProperty("iconfontviewer.e2e.gradleHome")?.let { File(it).canonicalFile }
+        val downloaded = if (remoteHome != null) {
+            check(!File(root, "fixtures/repository").exists()) { "Local repository could mask HTTP dependency discovery" }
+            val effectiveHome = GradleSettings.getInstance(project).serviceDirectoryPath
+                ?: System.getProperty("gradle.user.home") ?: System.getenv("GRADLE_USER_HOME")
+            check(effectiveHome != null && File(effectiveHome).canonicalFile == remoteHome) { "IDE Gradle home is not isolated: $effectiveHome" }
+            val repositoryRoot = File(System.getProperty("iconfontviewer.e2e.repositoryRoot")).canonicalFile
+            check(!repositoryRoot.toPath().startsWith(root.canonicalFile.toPath())) { "HTTP repository must be outside the project" }
+            manifest.getAsJsonArray("artifacts").associate { item ->
+                val artifact = item.asJsonObject
+                val directory = File(remoteHome, "caches/modules-2/files-2.1/com.example.iconfontfixtures/${artifact["id"].asString}/${manifest["version"].asString}")
+                val name = File(artifact["path"].asString).name
+                val file = directory.walkTopDown().filter { it.isFile && it.name == name }.single()
+                val digest = MessageDigest.getInstance("SHA-256").digest(file.readBytes()).joinToString("") { "%02x".format(it) }
+                check(digest == artifact["sha256"].asString) { "Wrong downloaded bytes: $file" }
+                artifact["id"].asString to file.canonicalFile
+            }
+        } else emptyMap()
         SearchStartupActivity.scanForFonts(project, indicator)
         val initial = settings.getFontInfosSnapshot()
         check(initial.map { it.path }.distinct().size == initial.size) { "Duplicate discovered paths" }
@@ -125,6 +145,12 @@ class LibraryFontE2EActivity : StartupActivity.DumbAware {
             }.distinct()
         }
         check(extractedRoots.isNotEmpty()) { "No real Android dependency model root for path-fixtures" }
+        if (remoteHome != null) {
+            check(extractedRoots.all { it.canonicalFile.toPath().startsWith(remoteHome.toPath()) }) { "Model exposed a non-isolated transform root: $extractedRoots" }
+            checks += mapOf("case" to "remote_maven", "gradle_user_home" to remoteHome.path,
+                "project_fixture_repository_absent" to true, "downloaded_artifacts" to downloaded.mapValues { it.value.path },
+                "extracted_roots" to extractedRoots.map { it.path })
+        }
         val provider = IconFontLineMarkerProvider()
         for (case in cases) {
             indicator.checkCanceled()
@@ -135,6 +161,13 @@ class LibraryFontE2EActivity : StartupActivity.DumbAware {
                 else font.path.endsWith("/$entry")
             }
             check(paths.isNotEmpty()) { "Missing dependency font: $id ($entry)" }
+            if (remoteHome != null && case["artifact"].asString != "source") {
+                val expectedArchivePath = downloaded.getValue(case["artifact"].asString).path + "!/" + entry
+                check(paths.any { it.path == expectedArchivePath }) { "Downloaded archive font missing: $expectedArchivePath" }
+                check(paths.all { File(it.path.substringBefore("!/")).canonicalFile.toPath().startsWith(remoteHome.toPath()) }) {
+                    "Project or shared-cache fallback masked remote case $id: ${paths.map { it.path }}"
+                }
+            }
             if (case["artifact"].asString == "path-fixtures") {
                 val firstEntry = entry.substringBefore("!/")
                 val heads = if (firstEntry == "classes.jar" || firstEntry.startsWith("libs/"))
@@ -208,6 +241,7 @@ class LibraryFontE2EActivity : StartupActivity.DumbAware {
         val file = File(root, baseline["path"].asString)
         val original = file.readBytes()
         val settings = IconFontSettings.getInstance(project)
+        val replacementPath = settings.getFontInfosSnapshot().first { it.path.endsWith("/${other["entry"].asString}") }.path
         settings.mutateFontInfos { fonts -> fonts.forEach { it.enabled = it.path == file.path } }
         val name = baseline.getAsJsonArray("resources")[0].asString
         val kotlinFile = File(root, "app/src/main/java/com/example/iconfontdemo/LibraryFontProbes.kt")
@@ -217,7 +251,7 @@ class LibraryFontE2EActivity : StartupActivity.DumbAware {
         }
         check(matches())
         try {
-            file.writeBytes(FontFileAccess.read(File(root, other["path"].asString).path) { it.readBytes() })
+            file.writeBytes(FontFileAccess.read(replacementPath) { it.readBytes() })
             SearchStartupActivity.scanForFonts(project, indicator)
             check(!matches()) { "Same-path replacement reused the stale font cache" }
         } finally {
