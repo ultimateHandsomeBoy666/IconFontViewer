@@ -8,7 +8,7 @@ Android Studio 插件 — 在编辑器 gutter 中预览 iconfont 图标。
 
 - **Gutter 预览** — Kotlin/Java 中的 `R.string.xxx`、XML 中的 `@string/xxx`、strings.xml 中的 `<string>` 定义，均可在行号旁直接看到图标
 - **点击替换** — 点击 gutter 图标，浏览该字体所有可用图标并一键替换
-- **智能扫描** — 启动时自动扫描项目和 AAR 依赖中的 TTF 字体文件
+- **智能扫描** — 启动时自动扫描项目和依赖目录中的 TTF，支持 AAR、JAR 及其嵌套归档内的字体
 - **字体管理** — 通过 Tools → IconFontViewer 管理字体的启用/禁用、手动添加和删除
 
 ## 截图
@@ -36,10 +36,12 @@ Settings → Plugins → Marketplace → 搜索 "IconFontViewer" → Install
 
 ## 使用
 
-1. 项目中准备好 iconfont TTF 文件（放在 `assets/` 或 `res/font/` 下，或通过 AAR 依赖引入）
+1. 项目中准备好 iconfont TTF 文件（放在 `assets/` 下或 `res/font/` 下，或通过 AAR 依赖引入）
 2. 在 `strings.xml` 中定义图标资源：`<string name="icon_home">&#xE88A;</string>`
 3. 在代码中引用 `R.string.icon_home`，gutter 处自动显示图标预览
 4. 通过 Tools → IconFontViewer 管理字体列表
+
+递归扫描依赖解包目录的全部子目录，包括 `res/`、`assets/`、`jars/` 及其他目录；同时扫描原始 AAR、依赖 JAR 及其嵌套归档内所有位置的 `.ttf`，不限制目录名。
 
 ## 兼容性
 
@@ -55,7 +57,7 @@ Settings → Plugins → Marketplace → 搜索 "IconFontViewer" → Install
 flowchart LR
     A["AS 启动"] --> B["扫描 TTF"]
     B --> B1["项目源码<br/>FilenameIndex"]
-    B --> B2["AAR 依赖<br/>OrderEnumerator"]
+    B --> B2["依赖目录和归档<br/>Android 依赖模型和类根<br/>递归扫描 TTF 和嵌套归档"]
     B1 & B2 --> C["FontInfo 列表<br/>IconFontSettings"]
 
     D["编辑器打开文件"] --> E["LineMarkerProvider"]

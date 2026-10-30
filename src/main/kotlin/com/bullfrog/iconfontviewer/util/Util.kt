@@ -13,7 +13,6 @@ import org.jetbrains.android.facet.AndroidFacet
 import com.android.tools.idea.res.StudioResourceRepositoryManager
 import com.bullfrog.iconfontviewer.model.IconFontPopupModel
 import java.awt.Font
-import java.io.File
 import java.util.*
 import javax.swing.Icon
 
@@ -161,8 +160,10 @@ private fun findMatchForChar(
 private fun loadFontFromCache(settings: IconFontSettings, fontPath: String): Font? {
     val cached = settings.fontCache.computeIfAbsent(fontPath) { path ->
         try {
-            Font.createFont(Font.TRUETYPE_FONT, File(path))
-                .deriveFont(IconFromIconFontCharacter.FONT_SIZE)
+            FontFileAccess.read(path) { input ->
+                Font.createFont(Font.TRUETYPE_FONT, input)
+                    .deriveFont(IconFromIconFontCharacter.FONT_SIZE)
+            }
         } catch (_: Exception) {
             FAILED_FONT_SENTINEL
         }
