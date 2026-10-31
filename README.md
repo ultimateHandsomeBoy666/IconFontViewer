@@ -26,12 +26,14 @@ Android Studio 插件 — 在编辑器 gutter 中预览 iconfont 图标。
 
 **方式一：Marketplace（推荐）**
 
-Settings → Plugins → Marketplace → 搜索 "IconFontViewer" → Install
+Settings → Plugins → Marketplace → 搜索 "IconFontViewer" → Install；已安装旧版时，在 Installed 中选择 IconFontViewer → Update，并按提示重启 Android Studio。
+
+插件主页：[JetBrains Marketplace](https://plugins.jetbrains.com/plugin/31478-iconfontviewer)。
 
 **方式二：本地安装**
 
-1. 下载 `IconFontViewer-1.0.0.zip`
-2. Settings → Plugins → ⚙️ → Install Plugin from Disk → 选择 zip 文件
+1. 打开 [Marketplace 1.2.0 版本页](https://plugins.jetbrains.com/plugin/31478-iconfontviewer/versions/stable/1207238)，点击 **Download** 下载插件 ZIP，也可直接下载 [IconFontViewer-1.2.0.zip](https://plugins.jetbrains.com/plugin/download?pluginId=com.bullfrog.IconFontViewer&version=1.2.0)。后续版本可从 [Marketplace 版本列表](https://plugins.jetbrains.com/plugin/31478-iconfontviewer/versions) 选择与当前 Android Studio 兼容的最新稳定版。
+2. Settings → Plugins → ⚙️ → Install Plugin from Disk → 选择下载的 ZIP 文件（无需解压）
 3. 重启 Android Studio
 
 ## 使用
